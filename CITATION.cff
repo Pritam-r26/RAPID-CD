@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+message: "If you use RAPID-CD in your research, please cite it using the following metadata."
+type: software
+title: "RAPID-CD: Rapid Analysis Pipeline for Interpreting Dichroism"
+version: 1.0.0
+date-released: "2026"
+authors:
+  - family-names: Roy
+    given-names: Pritam
+    affiliation: "Sorbonne University, Paris, France"
+abstract: >-
+  RAPID-CD is a locally-executed, privacy-centric web application for the
+  processing, visualisation and preliminary analysis of circular dichroism (CD)
+  spectroscopy data from peptides and small proteins. All computation is
+  performed locally; no data is transmitted to external servers.
+keywords:
+  - circular dichroism
+  - CD spectroscopy
+  - peptide analysis
+  - thermal melt
+  - secondary structure
+  - biophysics
+  - python
+  - streamlit
+license: MIT
+repository-code: "https://github.com/pritam-r26/RAPID-CD"

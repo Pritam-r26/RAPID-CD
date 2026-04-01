@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+venv/
+.venv/
+env/
+.env/
+
+# Streamlit cache
+.streamlit/
+
+# Jupyter notebooks (if any)
+.ipynb_checkpoints/
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Data files — do NOT commit user data
+*.txt
+*.csv
+*.xlsx
+
+# Keep the banner image (it is part of the app UI)
+!Cover_Image_2.png
+
+# Logs
+*.log
+rapid_cd_log.txt
