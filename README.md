@@ -33,7 +33,17 @@
 * **BeStSel and DichroWeb formatter** — direct export for external deconvolution servers
 
 \---
+## 🚀 Try it Online
 
+**No installation required** — open the app directly in your browser:
+
+[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://rapid-cd-analysis.streamlit.app)
+
+👉 **https://rapid-cd-analysis.streamlit.app**
+
+> For large datasets and full export functionality, local installation is recommended (see below).
+
+---
 ## Installation
 
 ### Requirements
