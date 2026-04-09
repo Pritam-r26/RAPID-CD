@@ -1115,8 +1115,8 @@ else:
                         is_310 = check_310_helix(p["wl"], p["sig"])
                 final_curves.append({"name": p["name"], "wl": vis_grid, "sig": vis_sig, "raw_sig": vis_raw, "stat_sig": stat_sig, "color": p["color"], "structure": struct_pct, "is_310": is_310, "nres": p["nres"], "is_d_peptide": p.get("is_d_peptide", False)})
 
-            #t1, t2, t3, t4, t5 = st.tabs(["📊 Overlay", "🔲 Separate", "📝 Statistics", "🧩 Sec. Structure", "🔗 Similarity"])
-            t1, t2, t3, t4, t5, t6 = st.tabs(["📊 Overlay", "🔲 Separate", "📝 Statistics", "🧩 Sec. Structure", "🔗 Similarity", "📡 Spectral Indicators"])
+            
+            t1, t2, t3, t4, t5, t6 = st.tabs(["📊 Overlay", "🔲 Separate", "📝 Statistics", "🧩 Sec. Structure", "🔗 Similarity", "🗺️ Spectral Projection"])
             
             with t1:
                 # Show format-detection summary banner if mixed inputs detected
@@ -1268,8 +1268,8 @@ else:
 
                 # Left margin scales with y-axis label length
                 mg_l = min(160, max(100, 85 + int(len(y_axis_label) * 1.8)))
-                mg_b = 85
-                mg_t = 70
+                mg_b = 100
+                mg_t = 85
                 mg_r = 30
 
                 # Spacing shrinks as the grid grows
@@ -1287,7 +1287,7 @@ else:
                 plot_area_w = max(1, fig_w - mg_l - mg_r)
                 plot_area_h = max(1, fig_h - mg_t - mg_b)
                 y_lbl_x = -(mg_l * 0.50) / plot_area_w
-                x_lbl_y = -(mg_b * 0.52) / plot_area_h
+                x_lbl_y = -(mg_b * 0.75) / plot_area_h
 
                 # ── 4. BUILD COMBINED FIGURE ─────────────────────────────────
                 fig_all = make_subplots(
@@ -1335,6 +1335,7 @@ else:
                 )
                 for ann in fig_all.layout.annotations:
                     ann.font = dict(size=mp_font, family="Arial", color="black")
+                    ann.update(yshift=12)
 
                 # ── 6. SHARED AXIS LABELS (auto-positioned) ──────────────────
                 fig_all.add_annotation(
@@ -1355,6 +1356,7 @@ else:
                 # ── 7. PREVIEW & DOWNLOAD ────────────────────────────────────
                 st.info("\U0001f447 Preview and download the combined panel below.")
                 with st.expander("\U0001f5bc\ufe0f Combined Panel Preview & Download", expanded=True):
+                    fig_all.add_hline(y=0, line_dash="dash", line_color="black", line_width=1, opacity=0.4)  #Zero reference line applied to all subplots in the grid
                     st.plotly_chart(fig_all, use_container_width=False)
                     c_dl1, c_dl2 = st.columns(2)
                     try:
@@ -2008,264 +2010,139 @@ else:
 
 
             with t6:
-                st.subheader("📡 Spectral Indicators")
+                st.subheader("🗺️ Multi-Sample Spectral Projection")
+                st.markdown(
+                    "This composite visualization compares multiple samples using the discrete projection style. "
+                    "The top panel displays stacked, baseline-resolved CD spectra, while the bottom panel "
+                    "projects the exact same data as discrete color-coded intensity strips. "
+                    "**Highly recommended for comparing wild-type vs mutants, or varying solvent conditions.**"
+                )
 
-                # ── EXPLANATION PANEL ─────────────────────────────────────────────
-                with st.expander("📖 What does this tab show? (Read before interpreting results)", expanded=True):
-                    st.markdown("""
-This tab reports a set of **objective, literature-validated spectral indicators** 
-derived directly from your CD data. Unlike automated classifiers, no predictions or 
-classifications are made. The numbers are reported as measured — **you bring the 
-biological interpretation** using your knowledge of your specific system.
-
----
-
-#### 1. Θ₂₂₂ / Θ₂₀₈ Ratio
-
-**What it is:** The ratio of the CD signal at 222 nm to the signal at 208 nm, 
-both interpolated from your processed spectrum.
-
-**Physical meaning:** Both 222 nm and 208 nm are n→π* and π→π* transitions of the 
-peptide bond, respectively. In an isolated, non-interacting α-helix, these two bands 
-maintain a characteristic ratio close to ~0.86. When helices interact (for example in 
-coiled-coils or helix bundles), the coupling of chromophores alters the 208 nm band 
-preferentially, shifting the ratio toward or above 1.0.
-
-**How to use it:**
-- **Ratio < 0.86:** Consistent with isolated, monomeric α-helices. Common in 
-  membrane-active antimicrobial peptides in solution.
-- **Ratio ≈ 0.86 – 1.0:** Intermediate. Could indicate partial oligomerisation, 
-  mixed conformational states, or simply that your peptide does not fit the 
-  idealized helix model.
-- **Ratio > 1.0:** Consistent with helix–helix interaction (coiled-coil geometry, 
-  helical bundles, fibres). Requires corroboration with orthogonal methods 
-  (e.g. AUC, SEC-MALS, native MS).
-
-**Important caveats:** This ratio is most informative for **predominantly helical 
-peptides**. For peptides with < 30% helix content (NNLS estimate), the 208 nm band 
-is dominated by random coil signal and the ratio loses interpretative power. The 
-ratio is reported as N/A if |Θ₂₀₈| < 1.0 (near-zero signal, indicating insufficient 
-helical content for meaningful ratio calculation).
-
-**Key reference:** Lau, S.Y.M., et al. (1984). *J. Biol. Chem.* 259, 13253.  
-Hodges, R.S., et al. (1981). *Biopolymers* 20, 1669.
-
----
-
-#### 2. 3₁₀-Helix Flag
-
-**What it is:** A boolean indicator (Yes / No) that detects whether your spectrum 
-is more consistent with a 3₁₀-helix than a standard α-helix.
-
-**Physical meaning:** The 3₁₀-helix is a tighter helix geometry (3 residues per 
-turn vs 3.6 for α) found in short peptides and at helix termini. Its CD spectrum 
-closely resembles an α-helix but with a characteristic distortion of the 208 nm 
-band. The flag is raised when **|Θ₂₂₂ / Θ₂₀₈| < 0.6 AND Θ₂₀₈ < −5** (in 
-displayed units), which is the published spectroscopic criterion.
-
-**How to use it:** Treat this as a prompt to investigate further — not a 
-definitive assignment. Confirmation requires NMR or X-ray data. It is most 
-relevant for short peptides (< 12 residues) where 3₁₀-helix geometry is common.
-
-**Key reference:** Millhauser, G.L. (1995). *Biochemistry* 34, 3873.
-
----
-
-#### 3. D-Amino Acid Flag
-
-**What it is:** Indicates whether you declared this sample as a D-amino acid 
-peptide in the sidebar.
-
-**Why it matters:** D-peptide spectra are the mirror image of L-peptide spectra 
-(positive where L is negative). This flag appears in the exported indicator table 
-so there is no ambiguity when the table is reviewed alongside published spectra.
-
----
-
-#### 4. Data Quality: Signal at 260 nm
-
-**What it is:** The interpolated CD signal at 260 nm, reported in your selected 
-output units.
-
-**Why it matters:** Peptide bonds and aliphatic amino acid side chains do not 
-absorb at 260 nm. A non-zero signal at 260 nm is therefore an indicator of 
-potential **baseline drift**, **aromatic side chain contributions** (Trp, Tyr, 
-Phe, or disulfide bonds), or **residual buffer absorption**. A signal close to 
-zero (within instrument noise, typically ± 0.5 mdeg) confirms a clean baseline.
-
-**How to use it:** If |signal at 260 nm| > 1.0 in mdeg (or equivalent), 
-inspect your blank subtraction and re-examine whether your buffer contains 
-UV-absorbing components. Note that Trp-containing peptides will legitimately 
-show signal at 260 nm from the indole side chain.
-
----
-
-#### 5. Wavelength of Primary Minimum and Maximum
-
-These are reproduced from the Statistics tab for convenience. They are the 
-most-cited spectral descriptors in CD publications and should be reported 
-in any methods or results section alongside the spectrum figure.
-
----
-
-#### ⚠ General note on all indicators
-
-All values are calculated from the **smoothed, blank-subtracted, unit-converted** 
-signal stored in memory at the time this tab is rendered. They will update 
-automatically if you change the wavelength range, metric, or smoothing settings 
-in the customisation panel above the tabs. Always verify that your smoothing 
-diagnostics (Overlay tab) show no artefactual distortion before reporting these values.
-                    """)
-
-                # ── CALCULATE INDICATORS ──────────────────────────────────────────
-                indicator_rows = []
-                for p in final_curves:
-                    if len(p["wl"]) == 0:
-                        continue
-
-                    f_ind = interp1d(p["wl"], p["sig"], kind="linear",
-                                     bounds_error=False, fill_value="extrapolate")
-
-                    val_222 = float(f_ind(222))
-                    val_208 = float(f_ind(208))
-                    val_260 = float(f_ind(260))
-
-                    # Θ₂₂₂ / Θ₂₀₈ ratio — only meaningful if 208 nm signal is substantial
-                    if abs(val_208) > 1.0:
-                        ratio_222_208 = round(val_222 / val_208, 3)
-                        ratio_str = str(ratio_222_208)
-                    else:
-                        ratio_222_208 = np.nan
-                        ratio_str = "N/A (|Θ₂₀₈| < 1.0)"
-
-                    # 3₁₀-helix flag (Millhauser 1995 criterion)
-                    is_310 = p.get("is_310", False)
-
-                    # D-peptide flag
-                    is_d = p.get("is_d_peptide", False)
-
-                    # Primary min/max from stats (re-use get_min_max)
-                    mm = get_min_max(p["wl"], p["sig"], wl_min, wl_max)
-                    lam_min = round(mm["Lambda Min 1 (nm)"], 1) if mm else "—"
-                    lam_max = round(mm["Lambda Max (nm)"], 1) if mm else "—"
-
-                    indicator_rows.append({
-                        "Sample":             p["name"],
-                        "Θ₂₂₂/Θ₂₀₈ Ratio":  ratio_str,
-                        "3₁₀-Helix Flag":     "✅ Yes" if is_310 else "No",
-                        "D-Amino Acid":        "✅ Yes" if is_d else "No",
-                        "Signal @ 260 nm":    round(val_260, 4),
-                        "λ Min (nm)":         lam_min,
-                        "λ Max (nm)":         lam_max,
-                    })
-
-                if indicator_rows:
-                    df_ind = pd.DataFrame(indicator_rows).set_index("Sample")
-                    st.markdown("##### 📊 Spectral Indicator Table")
-                    st.dataframe(df_ind, use_container_width=True)
-
-                    st.download_button(
-                        "💾 Download Indicator Table (CSV)",
-                        df_ind.to_csv().encode("utf-8"),
-                        "spectral_indicators.csv",
-                        "text/csv",
-                        key="dl_indicators"
-                    )
-
-                    st.divider()
-
-                    # ── RATIO VISUALISATION ───────────────────────────────────────
-                    valid_ratios = [r for r in indicator_rows
-                                    if r["Θ₂₂₂/Θ₂₀₈ Ratio"] not in ("N/A (|Θ₂₀₈| < 1.0)", "—")]
-                    if valid_ratios:
-                        st.markdown("##### 📈 Θ₂₂₂ / Θ₂₀₈ Ratio — Visual Guide")
-
-                        names_r  = [r["Sample"] for r in valid_ratios]
-                        values_r = [float(r["Θ₂₂₂/Θ₂₀₈ Ratio"]) for r in valid_ratios]
-                        bar_colors = []
-                        for v in values_r:
-                            if v < 0.86:   bar_colors.append("#2196F3")   # blue  — isolated helix range
-                            elif v <= 1.0: bar_colors.append("#FF9800")   # amber — intermediate
-                            else:          bar_colors.append("#F44336")   # red   — helix interaction range
-
-                        fig_ratio = go.Figure(data=[go.Bar(
-                            x=names_r, y=values_r,
-                            marker_color=bar_colors,
-                            text=[f"{v:.3f}" for v in values_r],
-                            textposition="auto",
-                        )])
-                        # Reference lines
-                        fig_ratio.add_hline(y=0.86, line_dash="dot", line_color="steelblue",
-                                            annotation_text="0.86 — Isolated α-helix",
-                                            annotation_position="top right",
-                                            annotation_font_size=11)
-                        fig_ratio.add_hline(y=1.00, line_dash="dot", line_color="firebrick",
-                                            annotation_text="1.00 — Helix-interaction threshold",
-                                            annotation_position="top right",
-                                            annotation_font_size=11)
-                        fig_ratio = apply_publication_style(
-                            fig_ratio, "Θ₂₂₂ / Θ₂₀₈ Ratio per Sample",
-                            "Sample", "Ratio (dimensionless)",
-                            show_grid=True, height=420, plot_mode="lines"
-                        )
-                        fig_ratio.update_layout(showlegend=False)
-                        st.plotly_chart(fig_ratio, use_container_width=True)
-                        st.caption(
-                            "🔵 Blue (ratio < 0.86): consistent with isolated/monomeric α-helix.  "
-                            "🟠 Amber (0.86 – 1.0): intermediate / mixed state.  "
-                            "🔴 Red (ratio > 1.0): consistent with helix–helix interaction "
-                            "(coiled-coil, bundle, fibre). Requires orthogonal validation."
-                        )
-
-                        try:
-                            c_r1, c_r2 = st.columns(2)
-                            c_r1.download_button(
-                                "📸 Download Ratio Plot (PNG)",
-                                fig_ratio.to_image(format="png", scale=3),
-                                "ratio_plot.png", "image/png", key="dl_ratio_png"
-                            )
-                            c_r2.download_button(
-                                "📄 Download Ratio Plot (PDF)",
-                                fig_ratio.to_image(format="pdf"),
-                                "ratio_plot.pdf", "application/pdf", key="dl_ratio_pdf"
-                            )
-                        except:
-                            pass
-
-                    # ── SIGNAL AT 260 nm ──────────────────────────────────────────
-                    st.divider()
-                    st.markdown("##### 🔬 Baseline Quality — Signal at 260 nm")
-                    vals_260  = [r["Signal @ 260 nm"] for r in indicator_rows]
-                    names_260 = [r["Sample"] for r in indicator_rows]
-                    colors_260 = ["#F44336" if abs(v) > 1.0 else "#4CAF50" for v in vals_260]
-
-                    fig_260 = go.Figure(data=[go.Bar(
-                        x=names_260, y=vals_260,
-                        marker_color=colors_260,
-                        text=[f"{v:.4f}" for v in vals_260],
-                        textposition="auto",
-                    )])
-                    fig_260.add_hline(y=0, line_dash="solid", line_color="black", line_width=1)
-                    fig_260.add_hline(y=1.0,  line_dash="dot", line_color="red",
-                                      annotation_text="+1.0 alert threshold",
-                                      annotation_position="top right", annotation_font_size=11)
-                    fig_260.add_hline(y=-1.0, line_dash="dot", line_color="red",
-                                      annotation_text="−1.0 alert threshold",
-                                      annotation_position="bottom right", annotation_font_size=11)
-                    fig_260 = apply_publication_style(
-                        fig_260, f"CD Signal at 260 nm ({y_axis_label.split('(')[0].strip()})",
-                        "Sample", y_axis_label, show_grid=True, height=380, plot_mode="lines"
-                    )
-                    fig_260.update_layout(showlegend=False)
-                    st.plotly_chart(fig_260, use_container_width=True)
-                    st.caption(
-                        "🟢 Green bars: |signal| ≤ 1.0 — baseline is clean.  "
-                        "🔴 Red bars: |signal| > 1.0 — investigate blank subtraction, "
-                        "aromatic side chains (Trp, Tyr), or buffer absorption."
-                    )
-
+                # Filter samples that actually have data
+                proj_samples = [p for p in final_curves if len(p["wl"]) > 0]
+                
+                if len(proj_samples) < 2:
+                    st.info("👈 Please select and process at least 2 samples to generate a multi-sample projection.")
                 else:
-                    st.info("👈 Upload and process samples in the sidebar to see spectral indicators.")
+                    # 1. UI CONTROLS
+                    st.markdown("##### 🛠️ Plot Controls")
+                    c_p1, c_p2, c_p3, c_p4 = st.columns(4)
+                    with c_p1:
+                        colorscale_ga = st.selectbox(
+                            "Bottom Color Scale", 
+                            ["RdBu_r", "PRGn_r", "PiYG_r", "PuOr_r", "Viridis"], 
+                            index=0, key="ga_proj_cs",
+                            help="Select 'PRGn_r' for the classic Purple/Green publication aesthetic."
+                        )
+                    with c_p2:
+                        symmetric_ga = st.checkbox("Symmetric Range (±)", value=True, key="ga_proj_sym")
+                    with c_p3:
+                        # Calculate amplitude for dynamic spacing
+                        max_sigs = [np.max(p["sig"]) for p in proj_samples]
+                        min_sigs = [np.min(p["sig"]) for p in proj_samples]
+                        amplitude_ga = max(max_sigs) - min(min_sigs) if max_sigs else 10
+                        spacing_ga = st.slider("Top Panel Spacing", 0.0, float(amplitude_ga), float(amplitude_ga * 0.4), step=float(amplitude_ga*0.05), key="ga_proj_spc")
+                    with c_p4:
+                        default_ht_ga = max(600, 200 + len(proj_samples) * 45)
+                        fig_height_ga = st.number_input("Figure Height (px)", 500, 2000, default_ht_ga, step=50, key="ga_proj_ht")
+
+                    # 2. DATA INTERPOLATION (Map all samples to a common wavelength grid)
+                    common_wl_grid = np.arange(wl_min, wl_max + 1, 1)
+                    z_matrix_ga = []
+                    sample_names_ga = []
+                    
+                    # Reverse the list so the first sample appears at the TOP of the stack
+                    for p in reversed(proj_samples):
+                        f_int = interp1d(p["wl"], p["sig"], bounds_error=False, fill_value=0)
+                        z_matrix_ga.append(f_int(common_wl_grid))
+                        sample_names_ga.append(p["name"])
+                        
+                    z_arr_ga = np.array(z_matrix_ga)
+
+                    # 3. BUILD THE COMPOSITE FIGURE
+                    fig_comp_ga = make_subplots(
+                        rows=2, cols=1, 
+                        shared_xaxes=True, 
+                        row_heights=[0.7, 0.3], 
+                        vertical_spacing=0.03
+                    )
+                    
+                    tick_vals_ga = []
+                    
+                    # Color Logic (Match PRGn if selected)
+                    pos_col_line = 'rgba(214, 39, 40, 1)'   # Red
+                    pos_col_fill = 'rgba(214, 39, 40, 0.4)'
+                    neg_col_line = 'rgba(31, 119, 180, 1)'  # Blue
+                    neg_col_fill = 'rgba(31, 119, 180, 0.4)'
+                    
+                    if colorscale_ga == "PRGn":
+                        pos_col_line = 'rgba(118, 42, 131, 1)'   # Purple
+                        pos_col_fill = 'rgba(118, 42, 131, 0.5)'
+                        neg_col_line = 'rgba(27, 120, 55, 1)'    # Green
+                        neg_col_fill = 'rgba(27, 120, 55, 0.5)'
+
+                    # TOP PANEL: Ridgeline Plot
+                    for i, s_name in enumerate(sample_names_ga):
+                        offset = i * spacing_ga
+                        tick_vals_ga.append(offset)
+                        
+                        sig_grid = z_arr_ga[i]
+                        y_pos = np.where(sig_grid > 0, sig_grid, 0) + offset
+                        y_neg = np.where(sig_grid < 0, sig_grid, 0) + offset
+                        
+                        # Fills
+                        fig_comp_ga.add_trace(go.Scatter(x=common_wl_grid, y=np.full_like(common_wl_grid, offset), mode='lines', line=dict(width=0), showlegend=False, hoverinfo='skip'), row=1, col=1)
+                        fig_comp_ga.add_trace(go.Scatter(x=common_wl_grid, y=y_pos, mode='lines', line=dict(color=pos_col_line, width=1.5), fill='tonexty', fillcolor=pos_col_fill, name=f"{s_name} (+)", showlegend=False), row=1, col=1)
+                        
+                        fig_comp_ga.add_trace(go.Scatter(x=common_wl_grid, y=np.full_like(common_wl_grid, offset), mode='lines', line=dict(width=0), showlegend=False, hoverinfo='skip'), row=1, col=1)
+                        fig_comp_ga.add_trace(go.Scatter(x=common_wl_grid, y=y_neg, mode='lines', line=dict(color=neg_col_line, width=1.5), fill='tonexty', fillcolor=neg_col_fill, name=f"{s_name} (-)", showlegend=False), row=1, col=1)
+                        
+                        # Baseline
+                        fig_comp_ga.add_trace(go.Scatter(x=[common_wl_grid[0], common_wl_grid[-1]], y=[offset, offset], mode='lines', line=dict(color='black', width=1, dash='solid'), opacity=0.2, showlegend=False, hoverinfo='skip'), row=1, col=1)
+
+                    # BOTTOM PANEL: Discrete Heatmap
+                    zmin_val = float(np.nanmin(z_arr_ga))
+                    zmax_val = float(np.nanmax(z_arr_ga))
+                    if symmetric_ga:
+                        z_abs = max(abs(zmin_val), abs(zmax_val))
+                        zmin_val, zmax_val = -z_abs, z_abs
+
+                    fig_comp_ga.add_trace(go.Heatmap(
+                        z=z_arr_ga, x=common_wl_grid, y=sample_names_ga,
+                        colorscale=colorscale_ga, zmin=zmin_val, zmax=zmax_val,
+                        colorbar=dict(
+                            title=dict(text=f"<b>{y_axis_label.split('(')[0].strip()}</b>", side="right", font=dict(size=12, family="Arial", color="black")),
+                            tickfont=dict(size=11, family="Arial", color="black"),
+                            thickness=15, len=0.35, y=0.15 
+                        ),
+                        xgap=0, ygap=3 
+                    ), row=2, col=1)
+
+                    # STYLING & LAYOUT
+                    fig_comp_ga.update_layout(
+                        title=dict(text="<b>Multi-Sample Spectral Projection</b>", x=0.5, font=dict(family="Arial", size=18, color="black")),
+                        template="simple_white", height=fig_height_ga, margin=dict(l=100, r=40, t=60, b=60), plot_bgcolor='white'
+                    )
+                    
+                    fig_comp_ga.update_xaxes(showline=True, linewidth=2, linecolor="black", mirror=True, showgrid=False, range=[wl_min, wl_max], row=1, col=1)
+                    fig_comp_ga.update_xaxes(title_text="<b>Wavelength (nm)</b>", title_font=dict(size=16, family="Arial", color="black"), tickfont=dict(size=14, family="Arial", color="black"), showline=True, linewidth=2, linecolor="black", mirror=True, showgrid=False, range=[wl_min, wl_max], row=2, col=1)
+                    
+                    fig_comp_ga.update_yaxes(title_text="<b>Sample</b>", tickmode='array', tickvals=tick_vals_ga, ticktext=sample_names_ga, showline=True, linewidth=2, linecolor="black", mirror=True, showgrid=False, zeroline=False, tickfont=dict(size=12, family="Arial", color="black"), row=1, col=1)
+                    fig_comp_ga.update_yaxes(showline=True, linewidth=2, linecolor="black", mirror=True, showgrid=False, tickfont=dict(size=12, family="Arial", color="black"), row=2, col=1)
+
+                    st.plotly_chart(fig_comp_ga, use_container_width=True, key="tab6_comp")
+
+                    # EXPORT BUTTONS
+                    st.markdown("##### 📥 Export Publication Plot")
+                    try:
+                        c_dl1, c_dl2, c_dl3 = st.columns(3)
+                        c_dl1.download_button("📸 Download Plot (PNG)", fig_comp_ga.to_image(format="png", scale=3), "general_projection.png", "image/png", key="ga_cp_dl_png")
+                        c_dl2.download_button("📄 Download Plot (PDF)", fig_comp_ga.to_image(format="pdf"), "general_projection.pdf", "application/pdf", key="ga_cp_dl_pdf")
+                        
+                        # Fix: Make sure sample names in CSV match the matrix order exactly
+                        matrix_df = pd.DataFrame(z_arr_ga, index=sample_names_ga, columns=common_wl_grid.round(2))
+                        c_dl3.download_button("💾 Download Matrix (CSV)", matrix_df.to_csv(), "general_projection_matrix.csv", key="ga_cp_dl_csv")
+                    except: pass
 
     # ── MODULE 2: THERMAL ANALYSIS ───────────────────────────────────────────────
     elif mode == "Thermal Analysis":
@@ -2614,7 +2491,7 @@ diagnostics (Overlay tab) show no artefactual distortion before reporting these 
 
                     # ── Per-sample temperature filter ──────────────────────────
                     st.markdown("---")
-                    st.markdown("##### 🌡️ Temperature Selection")
+                    st.markdown("##### 🌡️ Temperature Selection & Labelling")
                     st.caption(
                         "Choose which temperatures to display for each sample. "
                         "Useful when you only need to compare a subset of the recorded temperatures."
@@ -2657,6 +2534,17 @@ diagnostics (Overlay tab) show no artefactual distortion before reporting these 
                         for sname in ov_samples
                         for t in selected_temps_per_sample[sname]
                     ))
+                    
+                    # --- NEW: TEMPERATURE RENAMING FOR OVERLAY ---
+                    custom_labels_ov = {}
+                    if active_temps:
+                        with st.expander(f"✏️ Rename Temperature Labels ({len(active_temps)} active temperatures)", expanded=False):
+                            st.caption("Edit the text below to cleanly format the temperatures for your plot legend and CSV export (e.g., change 14.9 to 15).")
+                            ren_cols = st.columns(min(6, max(1, len(active_temps))))
+                            for i, t in enumerate(active_temps):
+                                with ren_cols[i % 6]:
+                                    custom_labels_ov[t] = st.text_input(f"Orig: {t}", value=f"{t}", key=f"ov_lbl_rename_{t}")
+                    
                     st.markdown("---")
 
                     # Manual colour pickers (shown in an expander to keep UI clean)
@@ -2673,8 +2561,9 @@ diagnostics (Overlay tab) show no artefactual distortion before reporting these 
                             cols_cp = st.columns(min(5, max(1, len(active_temps))))
                             for ti, t in enumerate(active_temps):
                                 with cols_cp[ti % 5]:
+                                    display_t = custom_labels_ov.get(t, t)
                                     manual_colors[t] = st.color_picker(
-                                        f"{t}°C",
+                                        f"{display_t}°C",
                                         value=DEFAULT_PALETTE[ti % len(DEFAULT_PALETTE)],
                                         key=f"ov_col_{ti}"
                                     )
@@ -2696,8 +2585,12 @@ diagnostics (Overlay tab) show no artefactual distortion before reporting these 
                                 r_col     = int(255 * frac)
                                 b_col     = 255 - r_col
                                 color_str = f"rgb({r_col}, 0, {b_col})"
-                            label = (f"{sname} — {d['temp']}°C"
-                                     if len(ov_samples) > 1 else f"{d['temp']}°C")
+                            
+                            # Use custom label
+                            display_temp = custom_labels_ov.get(d["temp"], d["temp"])
+                            label = (f"{sname} — {display_temp}°C"
+                                     if len(ov_samples) > 1 else f"{display_temp}°C")
+                            
                             fig_ov.add_trace(go.Scatter(
                                 x=d["wl"], y=d["sig"], mode="lines",
                                 name=label,
@@ -2730,18 +2623,25 @@ diagnostics (Overlay tab) show no artefactual distortion before reporting these 
                         fig_diag = go.Figure()
                         n_curves = len(curr_data)
                         for i, d in enumerate(curr_data):
+                            # Only show selected temps for diagnostics to avoid clutter
+                            if d["temp"] not in selected_temps_per_sample.get(selected_name, []):
+                                continue
+                                
                             r_col     = int(255 * (i / max(1, n_curves - 1)))
                             b_col     = 255 - r_col
                             color_str = f"rgb({r_col}, 0, {b_col})"
+                            
+                            display_temp = custom_labels_ov.get(d["temp"], d["temp"])
+                            
                             fig_diag.add_trace(go.Scatter(
                                 x=d["wl"], y=d["raw_sig"], mode="lines",
-                                name=f"{d['temp']}°C (Raw)",
+                                name=f"{display_temp}°C (Raw)",
                                 line=dict(color=color_str, width=1.0, dash="dot"),
                                 opacity=0.5
                             ))
                             fig_diag.add_trace(go.Scatter(
                                 x=d["wl"], y=d["sig"], mode="lines",
-                                name=f"{d['temp']}°C (Smoothed)",
+                                name=f"{display_temp}°C (Smoothed)",
                                 line=dict(color=color_str, width=line_width)
                             ))
                         fig_diag = apply_publication_style(
@@ -2762,11 +2662,14 @@ diagnostics (Overlay tab) show no artefactual distortion before reporting these 
                             continue
                         f_sig = interp1d(d["wl"], d["sig"],     bounds_error=False, fill_value="extrapolate")
                         f_raw = interp1d(d["wl"], d["raw_sig"], bounds_error=False, fill_value="extrapolate")
+                        
+                        display_temp = custom_labels_ov.get(d["temp"], d["temp"])
+                        
                         if apply_smooth:
-                            df_export[f"{d['temp']}°C (Raw)"]      = f_raw(curr_wl)
-                            df_export[f"{d['temp']}°C (Smoothed)"] = f_sig(curr_wl)
+                            df_export[f"{display_temp}°C (Raw)"]      = f_raw(curr_wl)
+                            df_export[f"{display_temp}°C (Smoothed)"] = f_sig(curr_wl)
                         else:
-                            df_export[f"{d['temp']}°C"] = f_sig(curr_wl)
+                            df_export[f"{display_temp}°C"] = f_sig(curr_wl)
                     df_export = df_export.round(4)
 
                     st.markdown("##### 📥 Export")
@@ -2917,9 +2820,17 @@ diagnostics (Overlay tab) show no artefactual distortion before reporting these 
                         )
 
                         # Subplot titles font
+                        # --- BOX SIZING & MARGINS---
+                        cell_w = 380   # Width of each box
+                        cell_h = 320   # Height of each box
+                        mg_l   = max(90, 60 + len(y_lbl_short) * 5)
+                        mg_b   = 70
+                        mg_t   = 65    # INCREASED: Gives more room at the top of the whole figure
+                        mg_r   = 20
+                        
                         for ann in fig_sub.layout.annotations:
-                            ann.font = dict(size=mp_font_sz + 1, family="Arial",
-                                            color="black")
+                            ann.font = dict(size=mp_font_sz + 1, family="Arial", color="black")
+                            ann.update(yshift=10)  # NEW: Pushes the title 10 pixels UP, away from the box border!
 
                         # Y-axis: full label on leftmost column, short on others
                         for r_i in range(1, rows_mp + 1):
@@ -2975,133 +2886,171 @@ diagnostics (Overlay tab) show no artefactual distortion before reporting these 
                                                   key="mp_dl_pdf")
                         except: pass
 
-            # ── TAB 3: SPECTRAL LANDSCAPE (2D HEATMAP) ───────────────────────
+            # ── TAB 3: SPECTRAL LANDSCAPE (COMPOSITE DISCRETE PROJECTION) ─────
             with tab3:
                 st.subheader(f"🗺️ λ–T Spectromap — {selected_name}")
                 st.markdown(
-                    "A **λ–T Spectromap** (wavelength–temperature spectral map) "
-                    "displays the full CD signal landscape: **wavelength (x-axis)**, "
-                    "**temperature (y-axis)**, and **signal intensity (colour)**. "
-                    "This is the 2D equivalent of a 3D surface plot and captures all "
-                    "spectral transitions across the melt in a single, publication-ready "
-                    "figure. Exported images are pixel-perfect reproductions of what "
-                    "you see on screen."
+                    "This composite visualization replicates the discrete projection style used in advanced spectroscopic publications. "
+                    "The top panel displays stacked, baseline-resolved CD spectra, while the bottom panel "
+                    "projects the exact same data as discrete color-coded intensity bars."
                 )
 
-                unique_wl    = np.sort(curr_wl)
-                unique_temps = sorted(curr_temps)
+                unique_wl = np.sort(curr_wl)
+                raw_temps = sorted(curr_temps)
 
-                # Interpolate every curve onto a common uniform wavelength grid
-                wl_grid = np.linspace(unique_wl[0], unique_wl[-1], len(unique_wl))
-                z_matrix = []
-                for t in unique_temps:
-                    curve = next((c for c in curr_data if c["temp"] == t), None)
-                    if curve:
-                        f_int = interp1d(curve["wl"], curve["sig"],
-                                         bounds_error=False, fill_value=0)
-                        z_matrix.append(f_int(wl_grid))
-                    else:
-                        z_matrix.append(np.zeros_like(wl_grid))
-                z_arr = np.array(z_matrix)
+                # --- NEW: TEMPERATURE SELECTION & RENAMING ---
+                st.markdown("##### 🌡️ Temperature Selection & Labelling")
+                
+                selected_temps = st.multiselect(
+                    "Select Temperatures to Include", 
+                    options=raw_temps, 
+                    default=raw_temps,
+                    key=f"hm_tsel_{selected_name}",
+                    help="Remove temperatures to reduce clutter, or select just 3-5 specific points to highlight."
+                )
+                
+                unique_temps = sorted(selected_temps)
+                custom_labels = {}
+                
+                if unique_temps:
+                    with st.expander("✏️ Rename Temperature Labels (e.g., change 14.9 to 15)", expanded=False):
+                        st.caption("Edit the text below to cleanly format the temperatures for your final publication figure.")
+                        ren_cols = st.columns(min(6, len(unique_temps)))
+                        for i, t in enumerate(unique_temps):
+                            with ren_cols[i % 6]:
+                                # Use text_input so they can write "15" or even "15 (Native)"
+                                custom_labels[t] = st.text_input(f"Orig: {t}", value=f"{t}", key=f"lbl_{selected_name}_{t}")
+                else:
+                    st.warning("👈 Please select at least one temperature to display the plot.")
+                
+                # Only build the plot if at least one temperature is selected
+                if unique_temps:
+                    # Interpolate every curve onto a common uniform wavelength grid
+                    wl_grid = np.linspace(unique_wl[0], unique_wl[-1], len(unique_wl))
+                    z_matrix = []
+                    for t in unique_temps:
+                        curve = next((c for c in curr_data if c["temp"] == t), None)
+                        if curve:
+                            f_int = interp1d(curve["wl"], curve["sig"], bounds_error=False, fill_value=0)
+                            z_matrix.append(f_int(wl_grid))
+                        else:
+                            z_matrix.append(np.zeros_like(wl_grid))
+                    z_arr = np.array(z_matrix)
 
-                # Colour scale selector
-                c_hm1, c_hm2, c_hm3 = st.columns(3)
-                with c_hm1:
-                    colorscale = st.selectbox(
-                        "Colour scale",
-                        ["RdBu_r", "Viridis", "Plasma", "Inferno", "Cividis",
-                         "RdYlBu_r", "Spectral_r", "Coolwarm"],
-                        index=0, key="hm_cscale",
-                        help="RdBu_r is recommended for CD data: negative = blue, "
-                             "positive = red, zero = white."
+                    # --- UI CONTROLS ---
+                    st.markdown("##### 🛠️ Plot Controls")
+                    c_c1, c_c2, c_c3, c_c4 = st.columns(4)
+                    with c_c1:
+                        # Fixed the PRGn_r reversed colorscale here!
+                        colorscale = st.selectbox(
+                            "Bottom Color Scale", 
+                            ["RdBu_r", "PRGn_r", "PiYG_r", "PuOr_r", "Viridis"], 
+                            index=0, key=f"hm_cs_{selected_name}",
+                            help="Tip: Select 'PRGn_r' to perfectly match the Purple/Green aesthetic of the Nature Communications paper!"
+                        )
+                    with c_c2:
+                        symmetric = st.checkbox("Symmetric Range (±)", value=True, key=f"hm_sym_{selected_name}")
+                    with c_c3:
+                        sig_max = max([np.max(c["sig"]) for c in curr_data if c["temp"] in unique_temps])
+                        sig_min = min([np.min(c["sig"]) for c in curr_data if c["temp"] in unique_temps])
+                        amplitude = sig_max - sig_min if sig_max != sig_min else 10
+                        spacing = st.slider("Top Panel Spacing", 0.0, float(amplitude), float(amplitude * 0.4), step=float(amplitude*0.05), key=f"rl_spc_{selected_name}")
+                    with c_c4:
+                        # Dynamically adjust default height based on number of temperatures
+                        default_ht = max(400, 200 + len(unique_temps) * 45)
+                        fig_height = st.number_input("Figure Height (px)", 300, 2000, default_ht, step=50, key=f"fig_ht_{selected_name}")
+
+                    # --- BUILD THE COMPOSITE FIGURE ---
+                    fig_comp = make_subplots(
+                        rows=2, cols=1, 
+                        shared_xaxes=True, 
+                        row_heights=[0.7, 0.3], 
+                        vertical_spacing=0.03   
                     )
-                with c_hm2:
-                    symmetric = st.checkbox(
-                        "Symmetric colour scale (±)",
-                        value=True, key="hm_sym",
-                        help="Forces the colour scale to be symmetric around zero, "
-                             "so that zero signal is always mid-colour (white for RdBu)."
-                    )
-                with c_hm3:
-                    hm_h = st.number_input("Figure height (px)", 350, 1200, 560,
-                                           step=50, key="hm_h")
+                    
+                    tick_vals = []
+                    tick_text = []
+                    
+                    # Colors
+                    pos_col_line = 'rgba(214, 39, 40, 1)'
+                    pos_col_fill = 'rgba(214, 39, 40, 0.4)'
+                    neg_col_line = 'rgba(31, 119, 180, 1)'
+                    neg_col_fill = 'rgba(31, 119, 180, 0.4)'
+                    
+                    if colorscale == "PRGn_r":
+                        pos_col_line = 'rgba(118, 42, 131, 1)'   # Purple
+                        pos_col_fill = 'rgba(118, 42, 131, 0.5)'
+                        neg_col_line = 'rgba(27, 120, 55, 1)'    # Green
+                        neg_col_fill = 'rgba(27, 120, 55, 0.5)'
 
-                # Build symmetric limits if requested
-                zmin_val = float(np.nanmin(z_arr))
-                zmax_val = float(np.nanmax(z_arr))
-                if symmetric:
-                    z_abs = max(abs(zmin_val), abs(zmax_val))
-                    zmin_val, zmax_val = -z_abs, z_abs
+                    # 1. POPULATE TOP PANEL (Ridgeline)
+                    for i, t in enumerate(unique_temps):
+                        offset = i * spacing
+                        tick_vals.append(offset)
+                        
+                        # Apply custom label from the user dictionary
+                        display_label = f"{custom_labels[t]}°C"
+                        tick_text.append(display_label)
+                        
+                        sig_grid = z_arr[i]
+                        y_pos = np.where(sig_grid > 0, sig_grid, 0) + offset
+                        y_neg = np.where(sig_grid < 0, sig_grid, 0) + offset
+                        
+                        fig_comp.add_trace(go.Scatter(x=wl_grid, y=np.full_like(wl_grid, offset), mode='lines', line=dict(width=0), showlegend=False, hoverinfo='skip'), row=1, col=1)
+                        fig_comp.add_trace(go.Scatter(x=wl_grid, y=y_pos, mode='lines', line=dict(color=pos_col_line, width=1.5), fill='tonexty', fillcolor=pos_col_fill, name=f"{display_label} (+)", showlegend=False), row=1, col=1)
+                        
+                        fig_comp.add_trace(go.Scatter(x=wl_grid, y=np.full_like(wl_grid, offset), mode='lines', line=dict(width=0), showlegend=False, hoverinfo='skip'), row=1, col=1)
+                        fig_comp.add_trace(go.Scatter(x=wl_grid, y=y_neg, mode='lines', line=dict(color=neg_col_line, width=1.5), fill='tonexty', fillcolor=neg_col_fill, name=f"{display_label} (-)", showlegend=False), row=1, col=1)
+                        
+                        fig_comp.add_trace(go.Scatter(x=[wl_grid[0], wl_grid[-1]], y=[offset, offset], mode='lines', line=dict(color='black', width=1, dash='solid'), opacity=0.2, showlegend=False, hoverinfo='skip'), row=1, col=1)
 
-                fig_hm = go.Figure(data=go.Heatmap(
-                    z=z_arr,
-                    x=wl_grid,
-                    y=unique_temps,
-                    colorscale=colorscale,
-                    zmin=zmin_val,
-                    zmax=zmax_val,
-                    colorbar=dict(
-                        title=dict(
-                            text=f"<b>{y_lbl_full}</b>",
-                            side="right",
-                            font=dict(size=13, family="Arial", color="black")
+                    # 2. POPULATE BOTTOM PANEL (Discrete Heatmap)
+                    zmin_val = float(np.nanmin(z_arr))
+                    zmax_val = float(np.nanmax(z_arr))
+                    if symmetric:
+                        z_abs = max(abs(zmin_val), abs(zmax_val))
+                        zmin_val, zmax_val = -z_abs, z_abs
+
+                    fig_comp.add_trace(go.Heatmap(
+                        z=z_arr, x=wl_grid, y=tick_text,
+                        colorscale=colorscale, zmin=zmin_val, zmax=zmax_val,
+                        colorbar=dict(
+                            title=dict(text=f"<b>{y_lbl_short}</b>", side="right", font=dict(size=12, family="Arial", color="black")),
+                            tickfont=dict(size=11, family="Arial", color="black"),
+                            thickness=15, len=0.35, y=0.15 
                         ),
-                        tickfont=dict(size=11, family="Arial", color="black"),
-                        thickness=18,
-                        len=0.85
-                    )
-                ))
-                fig_hm.update_layout(
-                    title=dict(
-                        text=f"<b>λ–T Spectromap — {selected_name}</b>",
-                        font=dict(size=18, family="Arial", color="black"),
-                        x=0.5, xanchor="center"
-                    ),
-                    xaxis=dict(
-                        title=dict(text="<b>Wavelength (nm)</b>",
-                                   font=dict(size=15, family="Arial", color="black")),
-                        tickfont=dict(size=12, family="Arial", color="black"),
-                        showgrid=False,
-                        showline=True, linewidth=2, linecolor="black", mirror=True,
-                        range=[wl_min, wl_max]
-                    ),
-                    yaxis=dict(
-                        title=dict(text="<b>Temperature (°C)</b>",
-                                   font=dict(size=15, family="Arial", color="black")),
-                        tickfont=dict(size=12, family="Arial", color="black"),
-                        showgrid=False,
-                        showline=True, linewidth=2, linecolor="black", mirror=True
-                    ),
-                    template="simple_white",
-                    height=hm_h,
-                    margin=dict(l=80, r=20, t=65, b=70)
-                )
+                        xgap=0, ygap=3 
+                    ), row=2, col=1)
 
-                st.plotly_chart(fig_hm, use_container_width=True, key="tab3_heatmap")
+                    # --- STYLING & LAYOUT ---
+                    fig_comp.update_layout(
+                        title=dict(text=f"<b>Discrete Spectral Projection — {selected_name}</b>", x=0.5, font=dict(family="Arial", size=18, color="black")),
+                        template="simple_white",
+                        height=fig_height,
+                        margin=dict(l=80, r=40, t=60, b=60),
+                        plot_bgcolor='white'
+                    )
+                    
+                    fig_comp.update_xaxes(showline=True, linewidth=2, linecolor="black", mirror=True, showgrid=False, range=[wl_min, wl_max], row=1, col=1)
+                    fig_comp.update_xaxes(title_text="<b>Wavelength (nm)</b>", title_font=dict(size=16, family="Arial", color="black"), tickfont=dict(size=14, family="Arial", color="black"), showline=True, linewidth=2, linecolor="black", mirror=True, showgrid=False, range=[wl_min, wl_max], row=2, col=1)
+                    
+                    fig_comp.update_yaxes(title_text="<b>Temperature (°C)</b>", tickmode='array', tickvals=tick_vals, ticktext=tick_text, showline=True, linewidth=2, linecolor="black", mirror=True, showgrid=False, zeroline=False, tickfont=dict(size=12, family="Arial", color="black"), row=1, col=1)
+                    fig_comp.update_yaxes(showline=True, linewidth=2, linecolor="black", mirror=True, showgrid=False, tickfont=dict(size=12, family="Arial", color="black"), row=2, col=1)
 
-                st.markdown("##### 📥 Export")
-                c_hm_dl1, c_hm_dl2, c_hm_dl3 = st.columns(3)
-                try:
-                    c_hm_dl1.download_button(
-                        "📸 Download PNG (High-Res)",
-                        fig_hm.to_image(format="png", scale=3),
-                        f"{selected_name}_spectromap.png", "image/png",
-                        key="hm_dl_png"
-                    )
-                    c_hm_dl2.download_button(
-                        "📄 Download PDF (Vector)",
-                        fig_hm.to_image(format="pdf"),
-                        f"{selected_name}_spectromap.pdf", "application/pdf",
-                        key="hm_dl_pdf"
-                    )
-                except: pass
-                matrix_df = pd.DataFrame(z_arr, index=unique_temps, columns=wl_grid.round(2))
-                c_hm_dl3.download_button(
-                    "💾 Download Matrix (CSV)",
-                    matrix_df.to_csv(),
-                    f"{selected_name}_spectromap_matrix.csv",
-                    key="hm_dl_csv"
-                )
+                    st.plotly_chart(fig_comp, use_container_width=True, key=f"tab3_comp_{selected_name}")
+
+                    # --- EXPORT BUTTONS ---
+                    st.markdown("##### 📥 Export Publication Plot")
+                    try:
+                        c_dl1, c_dl2, c_dl3 = st.columns(3)
+                        c_dl1.download_button("📸 Download Plot (PNG)", fig_comp.to_image(format="png", scale=3), f"{selected_name}_projection.png", "image/png", key=f"cp_dl_png_{selected_name}")
+                        c_dl2.download_button("📄 Download Plot (PDF)", fig_comp.to_image(format="pdf"), f"{selected_name}_projection.pdf", "application/pdf", key=f"cp_dl_pdf_{selected_name}")
+                        
+                        # Apply custom labels to the CSV export index as well!
+                        matrix_df = pd.DataFrame(z_arr, index=tick_text, columns=wl_grid.round(2))
+                        c_dl3.download_button("💾 Download Matrix (CSV)", matrix_df.to_csv(), f"{selected_name}_projection_matrix.csv", key=f"cp_dl_csv_{selected_name}")
+                    except: pass
+
 
             with tab4:
                 st.subheader("📊 λ Peak Tracking")
