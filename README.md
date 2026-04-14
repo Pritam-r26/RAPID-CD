@@ -5,7 +5,7 @@
 [!\[Python 3.9+](https://img.shields.io/badge/python-3.9%25252B-blue.svg)](https://www.python.org/)
 [!\[Streamlit](https://img.shields.io/badge/built%252520with-Streamlit-red)](https://streamlit.io)
 [!\[License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[!\[Version](https://img.shields.io/badge/version-1.0-green)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.2-green)](CHANGELOG.md)
 
 **RAPID-CD** is a locally-executed, privacy-centric web application for the processing, visualisation, and preliminary analysis of circular dichroism (CD) spectroscopy data from peptides and small proteins.
 
@@ -31,6 +31,10 @@
 * **Peak search windows** — restrict λ min/max search to avoid noise at 195–200 nm
 * **Publication-grade export**: PNG, PDF, CSV for every plot and dataset
 * **BeStSel and DichroWeb formatter** — direct export for external deconvolution servers
+* **Smart sequence parser** — paste a peptide sequence to auto-calculate residue count, ε₂₈₀ (Trp/Tyr/Cys), and approximate MW; high-aromatic-content warning included
+* **Correct HT and Absorbance channel reading** from JASCO multi-column thermal files (Channel 2 = HT, Channel 3 = Abs)
+* **Faster UI** — radio-based tab navigation renders only the active panel for improved speed on large datasets
+
 
 \---
 ## 🚀 Try it Online
@@ -44,6 +48,16 @@
 > For large datasets and full export functionality, local installation is recommended (see below).
 
 ---
+## What's New
+
+| Version | Highlights |
+|---------|-----------|
+| **v1.2** (2026) | Faster navigation (radio tabs); dark mode support; smart sequence parser with ε₂₈₀ and MW calculator; HT/Abs channel fix for thermal files |
+| **v1.1** (2026) | Discrete Spectral Projection (ridgeline + heatmap); Multi-Sample Spectral Projection; temperature filtering and label renaming; zero reference line in multi-panel view |
+| v1.0 (2026) | Initial release |
+
+See [CHANGELOG.md](CHANGELOG.md) for full details.
+
 ## Installation
 
 ### Requirements
