@@ -94,8 +94,8 @@ st.markdown("""
         font-size: 16px;
     }
     div[data-testid="stNumberInput"] input { padding: 0px 5px; }
-    
-    /* Home Screen Styling */
+
+    /* ── Home Screen Styling ── */
     .home-card {
         background-color: #f0f2f6;
         padding: 20px;
@@ -104,21 +104,70 @@ st.markdown("""
         margin-bottom: 10px;
         min-height: 240px;
     }
-    
-    .home-icon {
-        font-size: 50px;
-        margin-bottom: 10px;
+    .home-icon  { font-size: 50px; margin-bottom: 10px; }
+    .rapid-title {
+        text-align: center;
+        color: #1a1a2e;
     }
-    
-    .home-title {
-        font-size: 20px;
-        font-weight: bold;
-        color: #333;
+    @media (prefers-color-scheme: dark) {
+        .rapid-title { color: #fafafa; }
     }
-    .home-desc {
-        font-size: 14px;
-        color: #666;
-        margin-bottom: 20px;
+    .home-title { font-size: 20px; font-weight: bold; color: #333; }
+    .home-desc  { font-size: 14px; color: #666; margin-bottom: 20px; }
+
+    /* Dark-mode overrides for home cards */
+    @media (prefers-color-scheme: dark) {
+        .home-card  { background-color: #1e2530; }
+        .home-title { color: #f0f0f0; }
+        .home-desc  { color: #a0a8b8; }
+    }
+
+    /* ── Analysis-view tab selector bar ── */
+    /* Header banner (the blue strip rendered via st.markdown) */
+    .rapid-tab-header {
+        background: linear-gradient(90deg, #1565c0, #1976d2);
+        color: #ffffff;
+        padding: 9px 18px;
+        border-radius: 10px 10px 0 0;
+        font-weight: 700;
+        font-size: 13px;
+        letter-spacing: 0.4px;
+        margin-bottom: 0px;
+        border: 1.5px solid #1565c0;
+        border-bottom: none;
+        line-height: 1.4;
+    }
+
+    /* Radio-group container — only targets horizontal radio groups
+       (our two tab selectors) by detecting the flex-row layout.
+       Vertical radios in sidebars are unaffected. */
+    div[data-testid="stRadio"]:has([role="radiogroup"][style*="row"]) {
+        background-color: #e8f0fe;
+        border: 1.5px solid #1565c0;
+        border-top: none;
+        border-radius: 0 0 10px 10px;
+        padding: 10px 16px 12px 16px;
+        margin-top: 0px;
+        margin-bottom: 12px;
+    }
+    /* Radio option label text */
+    div[data-testid="stRadio"]:has([role="radiogroup"][style*="row"]) label {
+        font-size: 13px;
+        font-weight: 500;
+    }
+
+    @media (prefers-color-scheme: dark) {
+        .rapid-tab-header {
+            background: linear-gradient(90deg, #0d47a1, #1565c0);
+            border-color: #0d47a1;
+        }
+        div[data-testid="stRadio"]:has([role="radiogroup"][style*="row"]) {
+            background-color: #0a1929;
+            border-color: #0d47a1;
+        }
+        div[data-testid="stRadio"]:has([role="radiogroup"][style*="row"]) label {
+            color: #c8d8f0;
+        }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -183,48 +232,86 @@ REF_PPII  = pad_to_71(REF_PPII)
 REF_MATRIX = np.vstack([REF_HELIX, REF_SHEET, REF_COIL, REF_PPII]).T
 
 # ── SECTION 2: CORE HELPER FUNCTIONS ─────────────────────────────────────────
+def get_theme_colors():
+    """
+    Detects whether Streamlit is in dark or light mode and returns
+    appropriate colours for all plot elements.
+    Returns a dict with keys: bg, paper, text, grid, line, axis
+    """
+    try:
+        theme = st.get_option("theme.base")
+        is_dark = (theme == "dark")
+    except Exception:
+        is_dark = False
+
+    if is_dark:
+        return {
+            "bg":        "#0e1117",   # Streamlit dark background
+            "paper":     "#0e1117",
+            "text":      "#fafafa",   # near-white text
+            "grid":      "#2d2d2d",   # subtle dark grid
+            "line":      "#aaaaaa",   # light grey axes
+            "axis":      "#fafafa",
+            "template":  "plotly_dark",
+            "legend_border": "#555555",
+        }
+    else:
+        return {
+            "bg":        "white",
+            "paper":     "white",
+            "text":      "black",
+            "grid":      "lightgray",
+            "line":      "black",
+            "axis":      "black",
+            "template":  "simple_white",
+            "legend_border": "black",
+        }
+# ── Module-level theme colours (re-evaluated on every Streamlit rerun) ──
+_c = get_theme_colors()
+
 def apply_publication_style(fig, title, x_label, y_label, show_grid=True, width=None, height=500, plot_mode='lines'):
     """
-    Applies a strict, high-quality publication style.
-    Handles both Scatter (lines/markers) and Bar charts safely.
+    Applies publication style — automatically adapts to dark or light mode.
     """
+    c = get_theme_colors()
+
     fig.update_layout(
-        title=dict(text=f"<b>{title}</b>", font=dict(family="Arial", size=22, color="black"), x=0.5, xanchor='center'),
-        template="simple_white",
+        title=dict(text=f"<b>{title}</b>", font=dict(family="Arial", size=22, color=c["text"]), x=0.5, xanchor='center'),
+        template=c["template"],
+        paper_bgcolor=c["paper"],
+        plot_bgcolor=c["bg"],
         width=width, height=height,
-        font=dict(family="Arial", size=16, color="black"),
+        font=dict(family="Arial", size=16, color=c["text"]),
         xaxis=dict(
-            title=dict(text=f"<b>{x_label}</b>", font=dict(size=18, family="Arial", color="black")),
-            tickfont=dict(size=14, family="Arial", color="black"),
-            showgrid=show_grid, 
-            gridwidth=1, 
-            gridcolor='lightgray',
-            showline=True, 
-            linewidth=2, 
-            linecolor='black', 
+            title=dict(text=f"<b>{x_label}</b>", font=dict(size=18, family="Arial", color=c["axis"])),
+            tickfont=dict(size=14, family="Arial", color=c["axis"]),
+            showgrid=show_grid,
+            gridwidth=1,
+            gridcolor=c["grid"],
+            showline=True,
+            linewidth=2,
+            linecolor=c["line"],
             mirror=True
         ),
         yaxis=dict(
-            title=dict(text=f"<b>{y_label}</b>", font=dict(size=18, family="Arial", color="black")),
-            tickfont=dict(size=14, family="Arial", color="black"),
-            showgrid=show_grid, 
-            gridwidth=1, 
-            gridcolor='lightgray',
-            showline=True, 
-            linewidth=2, 
-            linecolor='black', 
+            title=dict(text=f"<b>{y_label}</b>", font=dict(size=18, family="Arial", color=c["axis"])),
+            tickfont=dict(size=14, family="Arial", color=c["axis"]),
+            showgrid=show_grid,
+            gridwidth=1,
+            gridcolor=c["grid"],
+            showline=True,
+            linewidth=2,
+            linecolor=c["line"],
             mirror=True
         ),
         legend=dict(
-            font=dict(size=14, family="Arial"),
-            bordercolor="black",
+            font=dict(size=14, family="Arial", color=c["text"]),
+            bordercolor=c["legend_border"],
             borderwidth=1
         ),
         margin=dict(r=50, l=60, t=60, b=60)
     )
-    
-    # Conditional Styling: ONLY apply 'mode' if it's a Scatter plot
-    # Bar charts do NOT have a 'mode' property, which causes the crash.
+
     is_bar = False
     if fig.data:
         if isinstance(fig.data[0], go.Bar):
@@ -233,18 +320,14 @@ def apply_publication_style(fig, title, x_label, y_label, show_grid=True, width=
     if not is_bar:
         if plot_mode == 'lines+markers':
             fig.update_traces(
-                mode='lines+markers', 
-                # Removed hardcoded line width so user sliders work!
-                marker=dict(size=9, line=dict(width=1, color='black'), symbol='circle')
+                mode='lines+markers',
+                marker=dict(size=9, line=dict(width=1, color=c["line"]), symbol='circle')
             )
         elif plot_mode == 'lines':
-            fig.update_traces(
-                mode='lines' 
-                # Removed hardcoded line width here too!
-            )
+            fig.update_traces(mode='lines')
         else:
             fig.update_traces(mode=plot_mode)
-    
+
     return fig
 
 def render_plot_editor(key_prefix, default_title="Plot", default_color="#0000FF"):
@@ -274,21 +357,48 @@ def render_plot_editor(key_prefix, default_title="Plot", default_color="#0000FF"
     }
 
 def apply_plot_style_custom(fig, style_dict, title, xtitle, ytitle, plot_mode='lines+markers'):
-    """Applies CUSTOM style from the editor expander."""
+    """Applies CUSTOM style from the editor expander — dark mode aware."""
+    c = get_theme_colors()
+
     fig.update_layout(
-        title=dict(text=f"<b>{title}</b>", font=dict(size=style_dict["font_size"]+4, color="black"), x=0.5),
+        title=dict(text=f"<b>{title}</b>", font=dict(size=style_dict["font_size"]+4, color=c["text"]), x=0.5),
         width=style_dict["width"],
         height=style_dict["height"],
-        template="simple_white",
-        font=dict(size=style_dict["font_size"], color="black", family="Arial"),
-        xaxis=dict(title=f"<b>{xtitle}</b>", showgrid=style_dict["grid"], showline=True, linewidth=2, linecolor='black', mirror=True, gridcolor='lightgray'),
-        yaxis=dict(title=f"<b>{ytitle}</b>", showgrid=style_dict["grid"], showline=True, linewidth=2, linecolor='black', mirror=True, gridcolor='lightgray'),
+        template=c["template"],
+        paper_bgcolor=c["paper"],
+        plot_bgcolor=c["bg"],
+        font=dict(size=style_dict["font_size"], color=c["text"], family="Arial"),
+        xaxis=dict(
+            title=f"<b>{xtitle}</b>",
+            showgrid=style_dict["grid"],
+            showline=True,
+            linewidth=2,
+            linecolor=c["line"],
+            mirror=True,
+            gridcolor=c["grid"],
+            tickfont=dict(color=c["axis"])
+        ),
+        yaxis=dict(
+            title=f"<b>{ytitle}</b>",
+            showgrid=style_dict["grid"],
+            showline=True,
+            linewidth=2,
+            linecolor=c["line"],
+            mirror=True,
+            gridcolor=c["grid"],
+            tickfont=dict(color=c["axis"])
+        ),
+        legend=dict(
+            font=dict(color=c["text"]),
+            bordercolor=c["legend_border"],
+            borderwidth=1
+        ),
         margin=dict(r=50, l=60, t=60, b=60)
     )
+
     if style_dict["x_range"]: fig.update_xaxes(range=style_dict["x_range"])
     if style_dict["y_range"]: fig.update_yaxes(range=style_dict["y_range"])
-    
-    # Same check here: if Bar chart, ignore mode
+
     is_bar = False
     if fig.data and isinstance(fig.data[0], go.Bar):
         is_bar = True
@@ -296,9 +406,9 @@ def apply_plot_style_custom(fig, style_dict, title, xtitle, ytitle, plot_mode='l
     if not is_bar:
         if plot_mode == 'lines+markers':
             fig.update_traces(
-                mode='lines+markers', 
+                mode='lines+markers',
                 line=dict(width=2.5),
-                marker=dict(size=style_dict["marker_size"], line=dict(width=1, color='black'), symbol='circle')
+                marker=dict(size=style_dict["marker_size"], line=dict(width=1, color=c["line"]), symbol='circle')
             )
         else:
             fig.update_traces(
@@ -467,6 +577,66 @@ def read_thermal_file(uploaded_file):
         return _read_thermal_file_cached(uploaded_file.getvalue())
     except Exception:
         return None, None
+@st.cache_data(show_spinner=False)
+def _read_thermal_channel_cached(file_bytes: bytes, channel: int):
+    """
+    Parse a specific channel from a JASCO multi-temperature multicolumn file.
+      channel=1 → CD (mdeg)   matches YUNITS
+      channel=2 → HT (V)      matches Y2UNITS
+      channel=3 → Absorbance  matches Y3UNITS
+    Returns (DataFrame, temps) or (None, None).
+    """
+    try:
+        text = file_bytes.decode("latin-1")
+    except Exception:
+        return None, None
+    lines = text.split("\n")
+    target = f"Channel {channel}"
+    start_idx = -1
+    temps = []
+    for i, line in enumerate(lines):
+        if target in line:
+            temp_line = lines[i + 1].strip().replace(",", ".")
+            try:
+                temps = [float(t) for t in temp_line.split()]
+            except ValueError:
+                return None, None
+            start_idx = i + 2
+            break
+    if start_idx == -1 or not temps:
+        return None, None
+    data_rows = []
+    for line in lines[start_idx:]:
+        if not line.strip() or "Channel" in line:
+            break
+        clean_line = line.replace(",", ".")
+        parts = clean_line.split()
+        try:
+            nums = [float(p) for p in parts]
+            if len(nums) == len(temps) + 1:
+                data_rows.append(nums)
+        except ValueError:
+            continue
+    if not data_rows:
+        return None, None
+    df = pd.DataFrame(data_rows, columns=["Wavelength"] + [f"{t}" for t in temps])
+    return df.sort_values("Wavelength"), temps
+
+
+def read_thermal_channel(uploaded_file, channel: int):
+    """
+    Public wrapper: read a specific channel from a JASCO multicolumn thermal file.
+    channel=1 → CD, channel=2 → HT, channel=3 → Abs.
+    Falls back to read_thermal_file (channel 1) if channel data is missing.
+    """
+    if uploaded_file is None:
+        return None, None
+    try:
+        return _read_thermal_channel_cached(uploaded_file.getvalue(), channel)
+    except Exception:
+        return None, None
+
+
 
 @st.cache_data(show_spinner=False)
 def deconvolve_signal(sample_wl, sample_sig):
@@ -649,7 +819,8 @@ def go_home():
 if st.session_state.page == "Home":
     
     # 1. CENTERED TITLE
-    st.markdown("<h1 style='text-align: center; color: #333;'>RAPID-CD</h1>", unsafe_allow_html=True)
+    _home_muted= "#a0a8b8" if st.get_option("theme.base") == "dark" else "#555555"
+    st.markdown("<h1 class='rapid-title'>RAPID-CD</h1>", unsafe_allow_html=True)
     
     # Load banner image from local file if available, else skip
     import base64
@@ -688,7 +859,7 @@ if st.session_state.page == "Home":
         <img src="{img_1}" class="youtube-banner">
     </div>
     
-    <div style="text-align: center; color: #666; font-size: 14px; margin-bottom: 25px;">
+    <div style="text-align: center; color: {_home_muted}; font-size: 14px; margin-bottom: 25px;">
         Rapid Analysis Pipeline for Interpreting Dichroism
     </div>
     """, unsafe_allow_html=True)
@@ -841,10 +1012,33 @@ else:
             samples = []
             for i in range(num_samples):
                 with st.expander(f"Sample {i+1}", expanded=(i==0)):
-                    c1, c2, c3 = st.columns([2, 1.2, 1.2])
+                    c1, c2 = st.columns([2, 1.2])
                     n = c1.text_input("Name", f"Sample {i+1}", key=f"n{i}", placeholder="Name")
                     c = c2.number_input("Conc (µM)", value=50.0, key=f"c{i}")
-                    r = c3.number_input("Residues", value=6, key=f"r{i}")
+                    
+                    # --- SMART SEQUENCE PARSER (General) ---
+                    seq_input = st.text_input("Peptide Sequence (Optional)", key=f"seq_{i}", placeholder="e.g., ALYFWC...")
+                    clean_seq = "".join([char.upper() for char in seq_input if char.isalpha()])
+                    
+                    if clean_seq:
+                        r = len(clean_seq)
+                        num_W = clean_seq.count('W')
+                        num_Y = clean_seq.count('Y')
+                        num_C = clean_seq.count('C')
+                        ext_coeff = (num_W * 5500) + (num_Y * 1490) + (int(num_C / 2) * 125)
+                        mw_est = (r * 110) + 18
+                        
+                        st.info(f"✅ **Auto-counted: {r} residues**")
+                        c_seq1, c_seq2 = st.columns(2)
+                        c_seq1.caption(f"🧮 **ε₂₈₀:** {ext_coeff} M⁻¹cm⁻¹")
+                        c_seq2.caption(f"⚖️ **MW:** ~{mw_est} Da")
+                        
+                        aromatic_pct = ((num_W + num_Y) / r) * 100
+                        if aromatic_pct > 15:
+                            st.warning(f"⚠️ **High Aromatic Content ({aromatic_pct:.1f}%):** Trp/Tyr signals may distort the 222 nm helical band.")
+                    else:
+                        r = st.number_input("Or enter number of residues manually:", value=6, key=f"r_manual_{i}")
+                    # ---------------------------------------
 
                     # File uploader must precede detect_yunits() — f must be defined first
                     st.markdown("---")
@@ -1116,9 +1310,21 @@ else:
                 final_curves.append({"name": p["name"], "wl": vis_grid, "sig": vis_sig, "raw_sig": vis_raw, "stat_sig": stat_sig, "color": p["color"], "structure": struct_pct, "is_310": is_310, "nres": p["nres"], "is_d_peptide": p.get("is_d_peptide", False)})
 
             
-            t1, t2, t3, t4, t5, t6 = st.tabs(["📊 Overlay", "🔲 Separate", "📝 Statistics", "🧩 Sec. Structure", "🔗 Similarity", "🗺️ Spectral Projection"])
+            st.markdown(
+                '<div class="rapid-tab-header">'  
+                '📋 &nbsp; General Analysis — Select View'
+                '</div>',
+                unsafe_allow_html=True
+            )
+            _ga_tab = st.radio(
+                "Select View",
+                ["📊 Overlay", "🔲 Separate", "📝 Statistics",
+                 "🧩 Sec. Structure", "🔗 Similarity", "🗺️ Spectral Projection"],
+                horizontal=True, key="ga_tab_radio",
+                label_visibility="collapsed"
+            )
             
-            with t1:
+            if _ga_tab == "📊 Overlay":
                 # Show format-detection summary banner if mixed inputs detected
                 fmt_summary = {}
                 for p in final_curves:
@@ -1140,16 +1346,49 @@ else:
 
                 # Main multi-sample overlay
                 st.markdown("##### Final Processed Overlay")
-                sel = st.multiselect("Select Curves:", [p["name"] for p in final_curves], default=[p["name"] for p in final_curves])
+                
+                # --- NEW: COLOUR MODE SELECTION ---
+                c_mode1, c_mode2 = st.columns([2, 1])
+                with c_mode1:
+                    sel = st.multiselect("Select Curves:", [p["name"] for p in final_curves], default=[p["name"] for p in final_curves])
+                with c_mode2:
+                    ga_colour_mode = st.radio(
+                        "Colour mode",
+                        ["Auto (Default)", "Manual per-sample"],
+                        key="ga_ov_colour_mode",
+                        help="Auto: Uses Plotly's default palette. Manual: Pick a specific colour for each sample."
+                    )
+
+                # Manual colour pickers
+                manual_colors_ga = {}
+                if ga_colour_mode == "Manual per-sample":
+                    with st.expander(f"🎨 Pick colours for {len(sel)} selected sample(s)", expanded=True):
+                        DEFAULT_PALETTE = [
+                            "#1f77b4","#ff7f0e","#2ca02c","#d62728","#9467bd",
+                            "#8c564b","#e377c2","#7f7f7f","#bcbd22","#17becf"
+                        ]
+                        cols_cp = st.columns(min(5, max(1, len(sel))))
+                        for i, sname in enumerate(sel):
+                            with cols_cp[i % 5]:
+                                manual_colors_ga[sname] = st.color_picker(
+                                    f"{sname}",
+                                    value=DEFAULT_PALETTE[i % len(DEFAULT_PALETTE)],
+                                    key=f"ga_ov_col_{i}"
+                                )
+                # ----------------------------------
+
                 fig = go.Figure()
                 for p in final_curves:
                     if p["name"] in sel and len(p["wl"]) > 0:
-                        fig.add_trace(go.Scatter(x=p["wl"], y=p["sig"], mode='lines', name=p["name"], line=dict(color=p["color"], width=line_width)))
+                        # --- NEW: APPLY SELECTED COLOUR ---
+                        line_col = manual_colors_ga[p["name"]] if ga_colour_mode == "Manual per-sample" else p["color"]
+                        # ----------------------------------
+                        fig.add_trace(go.Scatter(x=p["wl"], y=p["sig"], mode='lines', name=p["name"], line=dict(color=line_col, width=line_width)))
                 
                 fig = apply_publication_style(fig, "CD Spectra Overlay", "Wavelength (nm)", y_axis_label, show_grid, plot_mode='lines')
                 fig.update_xaxes(range=[wl_min, wl_max])
                 fig.update_yaxes(range=[y_min, y_max])
-                fig.add_hline(y=0, line_dash="dash", line_color="black", line_width=1, opacity=0.5)
+                fig.add_hline(y=0, line_dash="dash", line_color=_c["text"], line_width=1, opacity=0.5)
                 # Add a D-peptide label on the plot for any flagged sample
                 d_peptide_names = [p["name"] for p in final_curves if p.get("is_d_peptide") and p["name"] in sel]
                 if d_peptide_names:
@@ -1172,12 +1411,16 @@ else:
                     fig_diag = go.Figure()
                     for p in final_curves:
                         if p["name"] in sel and len(p["wl"]) > 0:
+                            # --- NEW: APPLY SELECTED COLOUR TO DIAGNOSTICS ---
+                            line_col = manual_colors_ga[p["name"]] if ga_colour_mode == "Manual per-sample" else p["color"]
+                            # ----------------------------------
+                            
                             # Plot Raw Data (Faded/Dotted)
                             fig_diag.add_trace(go.Scatter(
                                 x=p["wl"], y=p["raw_sig"], 
                                 mode='lines', 
                                 name=f"{p['name']} (Raw)",
-                                line=dict(color=p["color"], width=1.5, dash='dot'),
+                                line=dict(color=line_col, width=1.5, dash='dot'),
                                 opacity=0.6
                             ))
                             # Plot Smoothed Data (Solid/Bold)
@@ -1185,13 +1428,13 @@ else:
                                 x=p["wl"], y=p["sig"], 
                                 mode='lines', 
                                 name=f"{p['name']} (Smoothed)",
-                                line=dict(color=p["color"], width=line_width)
+                                line=dict(color=line_col, width=line_width)
                             ))
                             
                     fig_diag = apply_publication_style(fig_diag, "Raw vs. Smoothed Comparison", "Wavelength (nm)", y_axis_label, show_grid, plot_mode='lines')
                     fig_diag.update_xaxes(range=[wl_min, wl_max])
                     fig_diag.update_yaxes(range=[y_min, y_max])
-                    fig_diag.add_hline(y=0, line_dash="dash", line_color="black", line_width=1, opacity=0.5)
+                    fig_diag.add_hline(y=0, line_dash="dash", line_color=_c["text"], line_width=1, opacity=0.5)
                     st.plotly_chart(fig_diag, use_container_width=True)
 
                 # Build export DataFrame (raw + smoothed columns when smoothing active)
@@ -1237,7 +1480,7 @@ else:
                         try: st.download_button("📄 DL Raw & Smooth Plot (PDF)", fig_diag.to_image(format="pdf"), "raw_vs_smooth.pdf", "application/pdf", key="dl_diag_pdf")
                         except: pass
 
-            with t2:
+            if _ga_tab == "🔲 Separate":
                 # ── 1. CONTROLS ──────────────────────────────────────────────
                 c_sel1, c_sel2, c_sel3 = st.columns([1.5, 1, 1])
                 with c_sel1:
@@ -1302,7 +1545,7 @@ else:
                     if base:
                         fig_all.add_trace(
                             go.Scatter(x=base["wl"], y=base["sig"], showlegend=False,
-                                       line=dict(color="lightgray", width=1.5, dash="dash")),
+                                       line=dict(color=_c["grid"], width=1.5, dash="dash")),
                             row=r_idx, col=c_idx
                         )
                     fig_all.add_trace(
@@ -1314,27 +1557,29 @@ else:
                 # ── 5. APPLY LAYOUT ──────────────────────────────────────────
                 fig_all.update_layout(
                     height=fig_h, width=fig_w,
-                    template="simple_white",
+                    template=_c["template"],
+                        paper_bgcolor=_c["paper"],
+                        plot_bgcolor=_c["bg"],
                     showlegend=False,
                     title_text=f"Separate Analysis \u2014 {n_rows_mp}\u00d7{n_cols_mp} grid",
-                    title_font=dict(size=mp_font + 2, family="Arial", color="black"),
+                    title_font=dict(size=mp_font + 2, family="Arial", color=_c["text"]),
                     margin=dict(l=mg_l, r=mg_r, t=mg_t, b=mg_b),
-                    font=dict(family="Arial", size=mp_font - 2, color="black")
+                    font=dict(family="Arial", size=mp_font - 2, color=_c["text"])
                 )
                 fig_all.update_xaxes(
                     range=[wl_min, wl_max],
-                    showgrid=show_grid, gridcolor="lightgray",
-                    showline=True, linewidth=1.5, linecolor="black", mirror=True,
-                    tickfont=dict(size=mp_font - 2, family="Arial")
+                    showgrid=show_grid, gridcolor=_c["grid"],
+                    showline=True, linewidth=1.5, linecolor=_c["line"], mirror=True,
+                    tickfont=dict(size=mp_font - 2, family="Arial", color=_c["text"])
                 )
                 fig_all.update_yaxes(
                     range=[y_min, y_max],
-                    showgrid=show_grid, gridcolor="lightgray",
-                    showline=True, linewidth=1.5, linecolor="black", mirror=True,
-                    tickfont=dict(size=mp_font - 2, family="Arial")
+                    showgrid=show_grid, gridcolor=_c["grid"],
+                    showline=True, linewidth=1.5, linecolor=_c["line"], mirror=True,
+                    tickfont=dict(size=mp_font - 2, family="Arial", color=_c["text"])
                 )
                 for ann in fig_all.layout.annotations:
-                    ann.font = dict(size=mp_font, family="Arial", color="black")
+                    ann.font = dict(size=mp_font, family="Arial", color=_c["text"])
                     ann.update(yshift=12)
 
                 # ── 6. SHARED AXIS LABELS (auto-positioned) ──────────────────
@@ -1343,20 +1588,20 @@ else:
                     x=y_lbl_x, y=0.5,
                     xref="paper", yref="paper",
                     textangle=-90, showarrow=False,
-                    font=dict(size=mp_font, family="Arial", color="black")
+                    font=dict(size=mp_font, family="Arial", color=_c["text"])
                 )
                 fig_all.add_annotation(
                     text="<b>Wavelength (nm)</b>",
                     x=0.5, y=x_lbl_y,
                     xref="paper", yref="paper",
                     showarrow=False,
-                    font=dict(size=mp_font, family="Arial", color="black")
+                    font=dict(size=mp_font, family="Arial", color=_c["text"])
                 )
 
                 # ── 7. PREVIEW & DOWNLOAD ────────────────────────────────────
                 st.info("\U0001f447 Preview and download the combined panel below.")
                 with st.expander("\U0001f5bc\ufe0f Combined Panel Preview & Download", expanded=True):
-                    fig_all.add_hline(y=0, line_dash="dash", line_color="black", line_width=1, opacity=0.4)  #Zero reference line applied to all subplots in the grid
+                    fig_all.add_hline(y=0, line_dash="dash", line_color=_c["text"], line_width=1, opacity=0.4)  #Zero reference line applied to all subplots in the grid
                     st.plotly_chart(fig_all, use_container_width=False)
                     c_dl1, c_dl2 = st.columns(2)
                     try:
@@ -1388,7 +1633,7 @@ else:
                             f_ind.add_trace(go.Scatter(
                                 x=base["wl"], y=base["sig"],
                                 name=base["name"] + " (base)",
-                                line=dict(color="lightgray", width=2, dash="dash")
+                                line=dict(color=_c["grid"], width=2, dash="dash")
                             ))
                         f_ind.add_trace(go.Scatter(
                             x=p["wl"], y=p["sig"],
@@ -1411,7 +1656,7 @@ else:
                         except: pass
 
 
-            with t3:
+            if _ga_tab == "📝 Statistics":
                 stats_rows = []
                 for p in final_curves:
                     if len(p["wl"]) > 0:
@@ -1555,17 +1800,19 @@ else:
                         # Shared styling
                         fig_all_stats.update_layout(
                             height=700, width=900,
-                            template="simple_white",
+                            template=_c["template"],
+                        paper_bgcolor=_c["paper"],
+                        plot_bgcolor=_c["bg"],
                             title=dict(
                                 text="<b>Spectral Statistics Summary</b>",
                                 x=0.5, xanchor="center",
-                                font=dict(family="Arial", size=20, color="black")
+                                font=dict(family="Arial", size=20, color=_c["text"])
                             ),
-                            font=dict(family="Arial", size=13, color="black"),
+                            font=dict(family="Arial", size=13, color=_c["text"]),
                             margin=dict(l=70, r=30, t=80, b=60)
                         )
-                        fig_all_stats.update_xaxes(showline=True, linewidth=1.5, linecolor='black', mirror=True, tickangle=-30)
-                        fig_all_stats.update_yaxes(showline=True, linewidth=1.5, linecolor='black', mirror=True, showgrid=True, gridcolor='lightgray')
+                        fig_all_stats.update_xaxes(showline=True, linewidth=1.5, linecolor=_c["line"], mirror=True, tickangle=-30)
+                        fig_all_stats.update_yaxes(showline=True, linewidth=1.5, linecolor=_c["line"], mirror=True, showgrid=True, gridcolor=_c["grid"])
 
                         # Preview
                         st.plotly_chart(fig_all_stats, use_container_width=True)
@@ -1613,7 +1860,7 @@ else:
                             unsafe_allow_html=True
                         )
             
-            with t4:
+            if _ga_tab == "🧩 Sec. Structure":
                 st.subheader("🧩 Secondary Structure Estimation")
                 
                 st.warning("""
@@ -1749,21 +1996,21 @@ else:
                         # Fix Legend Overlap: Centered and pushed down slightly while margin is increased
                         legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5),
                         margin=dict(l=60, r=20, t=100, b=40), 
-                        font=dict(family="Arial", size=14, color="black"),
-                        plot_bgcolor='white'
+                        font=dict(family="Arial", size=14, color=_c["text"]),
+                        plot_bgcolor=_c["bg"]
                     )
                     
                     # Professional Scientific Borders (NNLS)
                     fig_nnls.update_xaxes(
-                        showline=True, linewidth=2, linecolor='black', mirror=True, 
-                        tickfont=dict(size=14, family="Arial", color="black")
+                        showline=True, linewidth=2, linecolor=_c["line"], mirror=True, 
+                        tickfont=dict(size=14, family="Arial", color=_c["text"])
                     )
                     fig_nnls.update_yaxes(
                         title_text="<b>Percentage (%)</b>", 
-                        title_font=dict(size=16, family="Arial", color="black"),
-                        showline=True, linewidth=2, linecolor='black', mirror=True,
-                        showgrid=True, gridcolor='lightgray', range=[0, 105],
-                        tickfont=dict(size=14, family="Arial", color="black")
+                        title_font=dict(size=16, family="Arial", color=_c["text"]),
+                        showline=True, linewidth=2, linecolor=_c["line"], mirror=True,
+                        showgrid=True, gridcolor=_c["grid"], range=[0, 105],
+                        tickfont=dict(size=14, family="Arial", color=_c["text"])
                     )
                     
                     # 2. Empirical Plot (Grouped Bar)
@@ -1792,14 +2039,14 @@ else:
                         # Fix Legend Overlap
                         legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5),
                         margin=dict(l=60, r=20, t=100, b=40), 
-                        font=dict(family="Arial", size=14, color="black"),
-                        plot_bgcolor='white'
+                        font=dict(family="Arial", size=14, color=_c["text"]),
+                        plot_bgcolor=_c["bg"]
                     )
                     
                     # Professional Scientific Borders (Empirical)
                     fig_emp.update_xaxes(
-                        showline=True, linewidth=2, linecolor='black', mirror=True,
-                        tickfont=dict(size=14, family="Arial", color="black")
+                        showline=True, linewidth=2, linecolor=_c["line"], mirror=True,
+                        tickfont=dict(size=14, family="Arial", color=_c["text"])
                     )
                     
                     # Dynamically calculate the maximum Y-value for the Empirical plot to ensure labels fit
@@ -1808,10 +2055,10 @@ else:
                     
                     fig_emp.update_yaxes(
                         title_text="<b>Percentage (%)</b>",
-                        title_font=dict(size=16, family="Arial", color="black"),
-                        showline=True, linewidth=2, linecolor='black', mirror=True,
-                        showgrid=True, gridcolor='lightgray', range=[0, y_max_emp],
-                        tickfont=dict(size=14, family="Arial", color="black")
+                        title_font=dict(size=16, family="Arial", color=_c["text"]),
+                        showline=True, linewidth=2, linecolor=_c["line"], mirror=True,
+                        showgrid=True, gridcolor=_c["grid"], range=[0, y_max_emp],
+                        tickfont=dict(size=14, family="Arial", color=_c["text"])
                     )
                     
                     # Render Plots & Download Buttons
@@ -1906,7 +2153,7 @@ else:
                     **If you export to BeStSel:**
                     * Micsonai, A., et al. (2022). BeStSel web server: secondary structure and fold prediction for circular dichroism spectroscopy. *Nucleic Acids Research*, 50(W1), W90-W98.
                     """)
-            with t5:
+            if _ga_tab == "🔗 Similarity":
                 st.subheader("📈 Statistical & Similarity Analysis")
 
                 if len(final_curves) < 2:
@@ -1951,10 +2198,10 @@ else:
                                 template="plotly_white", 
                                 margin=dict(l=20, r=20, t=30, b=20),
                                 width=400, height=400,
-                                font=dict(family="Arial", size=14, color="black")
+                                font=dict(family="Arial", size=14, color=_c["text"])
                             )
-                            fig_corr.update_xaxes(showline=True, linewidth=2, linecolor='black', mirror=True, tickfont=dict(color='black', weight='bold'))
-                            fig_corr.update_yaxes(showline=True, linewidth=2, linecolor='black', mirror=True, tickfont=dict(color='black', weight='bold'))
+                            fig_corr.update_xaxes(showline=True, linewidth=2, linecolor=_c["line"], mirror=True, tickfont=dict(color=_c["text"], weight='bold'))
+                            fig_corr.update_yaxes(showline=True, linewidth=2, linecolor=_c["line"], mirror=True, tickfont=dict(color=_c["text"], weight='bold'))
                             
                             st.plotly_chart(fig_corr, use_container_width=True)
                             
@@ -1971,10 +2218,10 @@ else:
                                 margin=dict(l=20, r=20, t=30, b=20),
                                 xaxis_title="<b>Distance (Dissimilarity)</b>",
                                 yaxis_title="<b>Samples</b>",
-                                font=dict(family="Arial", size=14, color="black")
+                                font=dict(family="Arial", size=14, color=_c["text"])
                             )
-                            fig_dendro.update_xaxes(showline=True, linewidth=2, linecolor='black', mirror=True, tickfont=dict(color='black'))
-                            fig_dendro.update_yaxes(showline=True, linewidth=2, linecolor='black', mirror=True, tickfont=dict(color='black', weight='bold'))
+                            fig_dendro.update_xaxes(showline=True, linewidth=2, linecolor=_c["line"], mirror=True, tickfont=dict(color=_c["text"]))
+                            fig_dendro.update_yaxes(showline=True, linewidth=2, linecolor=_c["line"], mirror=True, tickfont=dict(color=_c["text"], weight='bold'))
                             
                             st.plotly_chart(fig_dendro, use_container_width=True)
                             
@@ -2009,7 +2256,7 @@ else:
                             """)
 
 
-            with t6:
+            if _ga_tab == "🗺️ Spectral Projection":
                 st.subheader("🗺️ Multi-Sample Spectral Projection")
                 st.markdown(
                     "This composite visualization compares multiple samples using the discrete projection style. "
@@ -2098,7 +2345,7 @@ else:
                         fig_comp_ga.add_trace(go.Scatter(x=common_wl_grid, y=y_neg, mode='lines', line=dict(color=neg_col_line, width=1.5), fill='tonexty', fillcolor=neg_col_fill, name=f"{s_name} (-)", showlegend=False), row=1, col=1)
                         
                         # Baseline
-                        fig_comp_ga.add_trace(go.Scatter(x=[common_wl_grid[0], common_wl_grid[-1]], y=[offset, offset], mode='lines', line=dict(color='black', width=1, dash='solid'), opacity=0.2, showlegend=False, hoverinfo='skip'), row=1, col=1)
+                        fig_comp_ga.add_trace(go.Scatter(x=[common_wl_grid[0], common_wl_grid[-1]], y=[offset, offset], mode='lines', line=dict(color=_c["text"], width=1, dash='solid'), opacity=0.2, showlegend=False, hoverinfo='skip'), row=1, col=1)
 
                     # BOTTOM PANEL: Discrete Heatmap
                     zmin_val = float(np.nanmin(z_arr_ga))
@@ -2111,8 +2358,8 @@ else:
                         z=z_arr_ga, x=common_wl_grid, y=sample_names_ga,
                         colorscale=colorscale_ga, zmin=zmin_val, zmax=zmax_val,
                         colorbar=dict(
-                            title=dict(text=f"<b>{y_axis_label.split('(')[0].strip()}</b>", side="right", font=dict(size=12, family="Arial", color="black")),
-                            tickfont=dict(size=11, family="Arial", color="black"),
+                            title=dict(text=f"<b>{y_axis_label.split('(')[0].strip()}</b>", side="right", font=dict(size=12, family="Arial", color=_c["text"])),
+                            tickfont=dict(size=11, family="Arial", color=_c["text"]),
                             thickness=15, len=0.35, y=0.15 
                         ),
                         xgap=0, ygap=3 
@@ -2120,15 +2367,17 @@ else:
 
                     # STYLING & LAYOUT
                     fig_comp_ga.update_layout(
-                        title=dict(text="<b>Multi-Sample Spectral Projection</b>", x=0.5, font=dict(family="Arial", size=18, color="black")),
-                        template="simple_white", height=fig_height_ga, margin=dict(l=100, r=40, t=60, b=60), plot_bgcolor='white'
+                        title=dict(text="<b>Multi-Sample Spectral Projection</b>", x=0.5, font=dict(family="Arial", size=18, color=_c["text"])),
+                        template=_c["template"],
+                        paper_bgcolor=_c["paper"],
+                        height=fig_height_ga, margin=dict(l=100, r=40, t=60, b=60)
                     )
                     
-                    fig_comp_ga.update_xaxes(showline=True, linewidth=2, linecolor="black", mirror=True, showgrid=False, range=[wl_min, wl_max], row=1, col=1)
-                    fig_comp_ga.update_xaxes(title_text="<b>Wavelength (nm)</b>", title_font=dict(size=16, family="Arial", color="black"), tickfont=dict(size=14, family="Arial", color="black"), showline=True, linewidth=2, linecolor="black", mirror=True, showgrid=False, range=[wl_min, wl_max], row=2, col=1)
+                    fig_comp_ga.update_xaxes(showline=True, linewidth=2, linecolor=_c["line"], mirror=True, showgrid=False, range=[wl_min, wl_max], row=1, col=1)
+                    fig_comp_ga.update_xaxes(title_text="<b>Wavelength (nm)</b>", title_font=dict(size=16, family="Arial", color=_c["text"]), tickfont=dict(size=14, family="Arial", color=_c["text"]), showline=True, linewidth=2, linecolor=_c["line"], mirror=True, showgrid=False, range=[wl_min, wl_max], row=2, col=1)
                     
-                    fig_comp_ga.update_yaxes(title_text="<b>Sample</b>", tickmode='array', tickvals=tick_vals_ga, ticktext=sample_names_ga, showline=True, linewidth=2, linecolor="black", mirror=True, showgrid=False, zeroline=False, tickfont=dict(size=12, family="Arial", color="black"), row=1, col=1)
-                    fig_comp_ga.update_yaxes(showline=True, linewidth=2, linecolor="black", mirror=True, showgrid=False, tickfont=dict(size=12, family="Arial", color="black"), row=2, col=1)
+                    fig_comp_ga.update_yaxes(title_text="<b>Sample</b>", tickmode='array', tickvals=tick_vals_ga, ticktext=sample_names_ga, showline=True, linewidth=2, linecolor=_c["line"], mirror=True, showgrid=False, zeroline=False, tickfont=dict(size=12, family="Arial", color=_c["text"]), row=1, col=1)
+                    fig_comp_ga.update_yaxes(showline=True, linewidth=2, linecolor=_c["line"], mirror=True, showgrid=False, tickfont=dict(size=12, family="Arial", color=_c["text"]), row=2, col=1)
 
                     st.plotly_chart(fig_comp_ga, use_container_width=True, key="tab6_comp")
 
@@ -2163,10 +2412,33 @@ else:
             thermal_samples = []
             for i in range(num_thermal):
                 with st.expander(f"Sample {i+1}", expanded=(i==0)):
-                    c1, c2, c3 = st.columns([2, 1.2, 1.2])
+                    c1, c2 = st.columns([2, 1.2])
                     n = c1.text_input("Name", f"Sample {i+1}", key=f"nt{i}")
                     c = c2.number_input("Conc (µM)", value=50.0, key=f"ct{i}")
-                    r = c3.number_input("Residues", value=6, key=f"rt{i}")
+                    
+                    # --- SMART SEQUENCE PARSER (Thermal) ---
+                    seq_input = st.text_input("Peptide Sequence (Optional)", key=f"seq_t_{i}", placeholder="e.g., ALYFWC...")
+                    clean_seq = "".join([char.upper() for char in seq_input if char.isalpha()])
+                    
+                    if clean_seq:
+                        r = len(clean_seq)
+                        num_W = clean_seq.count('W')
+                        num_Y = clean_seq.count('Y')
+                        num_C = clean_seq.count('C')
+                        ext_coeff = (num_W * 5500) + (num_Y * 1490) + (int(num_C / 2) * 125)
+                        mw_est = (r * 110) + 18
+                        
+                        st.info(f"✅ **Auto-counted: {r} residues**")
+                        c_seq1, c_seq2 = st.columns(2)
+                        c_seq1.caption(f"🧮 **ε₂₈₀:** {ext_coeff} M⁻¹cm⁻¹")
+                        c_seq2.caption(f"⚖️ **MW:** ~{mw_est} Da")
+                        
+                        aromatic_pct = ((num_W + num_Y) / r) * 100
+                        if aromatic_pct > 15:
+                            st.warning(f"⚠️ **High Aromatic Content ({aromatic_pct:.1f}%):** Trp/Tyr signals may distort the 222 nm helical band.")
+                    else:
+                        r = st.number_input("Or enter number of residues manually:", value=6, key=f"rt_manual_{i}")
+                    # ---------------------------------------
                     st.markdown("---")
                     data_format = st.radio("Data Format", ["Multi-Column File (Jasco)", "Discrete Files (One per Temp)"], key=f"fmt{i}")
                     f, discrete_files, b = None, [], None
@@ -2261,10 +2533,17 @@ else:
             
             # 1. Multi-Column Logic (Jasco)
             if s["format"] == "Multi-Column File (Jasco)" and s["file"]:
-                raw_df, temps = read_thermal_file(s["file"])
+                # Select the correct JASCO channel based on the requested metric:
+                #   Channel 1 = CD (mdeg), Channel 2 = HT (V), Channel 3 = Absorbance
+                _ch = 2 if metric == "HT" else (3 if metric == "Abs" else 1)
+                if _ch > 1:
+                    raw_df, temps = read_thermal_channel(s["file"], _ch)
+                else:
+                    raw_df, temps = read_thermal_file(s["file"])
                 if raw_df is not None:
                     b_df = c_blank_df_t if blank_mode_t == "Common" else (read_cd_file(s["blank"]) if s["blank"] else None)
-                    if b_df is not None:
+                    # Blank subtraction only applies to CD-derived metrics, not HT/Abs
+                    if b_df is not None and metric not in ["HT", "Abs"]:
                         f_b = interp1d(b_df["Wavelength"], b_df["CD"], bounds_error=False, fill_value="extrapolate")
                         blank_sig = f_b(raw_df["Wavelength"])
                         for t in temps: raw_df[f"{t}"] -= blank_sig
@@ -2454,10 +2733,23 @@ else:
             xt = format_axis_text("Wavelength (nm)", True, False)
             yt = format_axis_text(y_lbl_full, True, False)
 
-            tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(["🌈 Overlay", "🔲 Multi-Panel", "🗺️ λ–T Spectromap", "📊 λ Peak Tracking", "🧩 Sec. Structure", "⚗️ Thermodynamics", "🔮 Spectral Simulation"])
+            st.markdown(
+                '<div class="rapid-tab-header">'  
+                '🌡️ &nbsp; Thermal Analysis — Select View'
+                '</div>',
+                unsafe_allow_html=True
+            )
+            _th_tab = st.radio(
+                "Select View",
+                ["🌈 Overlay", "🔲 Multi-Panel", "🗺️ λ–T Spectromap",
+                 "📊 λ Peak Tracking", "🧩 Sec. Structure",
+                 "⚗️ Thermodynamics", "🔮 Spectral Simulation"],
+                horizontal=True, key="th_tab_radio",
+                label_visibility="collapsed"
+            )
         
             # ── TAB 1: OVERLAY (multi-sample + per-temperature colour) ──────
-            with tab1:
+            if _th_tab == "🌈 Overlay":
                 st.markdown("##### 🌈 Thermal CD Overlay")
                 ov_col1, ov_col2 = st.columns([2, 1])
                 with ov_col1:
@@ -2612,7 +2904,7 @@ else:
                     )
                     fig_ov.update_xaxes(range=[wl_min, wl_max])
                     if not y_auto: fig_ov.update_yaxes(range=[y_min, y_max])
-                    fig_ov.add_hline(y=0, line_dash="dash", line_color="black",
+                    fig_ov.add_hline(y=0, line_dash="dash", line_color=_c["text"],
                                      line_width=1, opacity=0.5)
                     st.plotly_chart(fig_ov, use_container_width=True, key="tab1_overlay")
 
@@ -2650,7 +2942,7 @@ else:
                         )
                         fig_diag.update_xaxes(range=[wl_min, wl_max])
                         if not y_auto: fig_diag.update_yaxes(range=[y_min, y_max])
-                        fig_diag.add_hline(y=0, line_dash="dash", line_color="black",
+                        fig_diag.add_hline(y=0, line_dash="dash", line_color=_c["text"],
                                            line_width=1, opacity=0.5)
                         st.plotly_chart(fig_diag, use_container_width=True, key="tab1_diag")
 
@@ -2694,7 +2986,7 @@ else:
                             except: pass
 
             # ── TAB 2: MULTI-PANEL ───────────────────────────────────────────
-            with tab2:
+            if _th_tab == "🔲 Multi-Panel":
                 st.markdown("##### 🔲 Multi-Panel Comparison by Temperature")
 
                 col_mp1, col_mp2, col_mp3 = st.columns([2, 1, 1])
@@ -2811,12 +3103,14 @@ else:
                         fig_sub.update_layout(
                             height=cell_h * rows_mp,
                             width=cell_w * cols_per_row,
-                            template="simple_white",
+                            template=_c["template"],
+                        paper_bgcolor=_c["paper"],
+                        plot_bgcolor=_c["bg"],
                             showlegend=True,
                             legend=dict(font=dict(size=mp_font_sz, family="Arial"),
-                                        borderwidth=1, bordercolor="black"),
+                                        borderwidth=1, bordercolor=_c["legend_border"]),
                             margin=dict(l=mg_l, r=mg_r, t=mg_t, b=mg_b),
-                            font=dict(family="Arial", size=mp_font_sz, color="black")
+                            font=dict(family="Arial", size=mp_font_sz, color=_c["text"])
                         )
 
                         # Subplot titles font
@@ -2829,35 +3123,35 @@ else:
                         mg_r   = 20
                         
                         for ann in fig_sub.layout.annotations:
-                            ann.font = dict(size=mp_font_sz + 1, family="Arial", color="black")
+                            ann.font = dict(size=mp_font_sz + 1, family="Arial", color=_c["text"])
                             ann.update(yshift=10)  # NEW: Pushes the title 10 pixels UP, away from the box border!
 
                         # Y-axis: full label on leftmost column, short on others
                         for r_i in range(1, rows_mp + 1):
                             fig_sub.update_yaxes(
                                 title_text=f"<b>{y_lbl_full}</b>",
-                                title_font=dict(size=mp_font_sz, family="Arial"),
-                                tickfont=dict(size=mp_font_sz - 1, family="Arial"),
-                                showgrid=show_grid, gridcolor="lightgray",
-                                showline=True, linewidth=1, linecolor="black",
+                                title_font=dict(size=mp_font_sz, family="Arial", color=_c["text"]),
+                                tickfont=dict(size=mp_font_sz - 1, family="Arial", color=_c["text"]),
+                                showgrid=show_grid, gridcolor=_c["grid"],
+                                showline=True, linewidth=1, linecolor=_c["line"],
                                 mirror=True, row=r_i, col=1
                             )
                             # No y-title on other columns (avoids clutter)
                             for c_i in range(2, cols_per_row + 1):
                                 fig_sub.update_yaxes(
                                     title_text="",
-                                    tickfont=dict(size=mp_font_sz - 1, family="Arial"),
-                                    showgrid=show_grid, gridcolor="lightgray",
-                                    showline=True, linewidth=1, linecolor="black",
+                                    tickfont=dict(size=mp_font_sz - 1, family="Arial", color=_c["text"]),
+                                    showgrid=show_grid, gridcolor=_c["grid"],
+                                    showline=True, linewidth=1, linecolor=_c["line"],
                                     mirror=True, row=r_i, col=c_i
                                 )
 
                         fig_sub.update_xaxes(
                             range=[wl_min, wl_max], showgrid=show_grid,
-                            showline=True, linewidth=1, linecolor="black", mirror=True,
-                            tickfont=dict(size=mp_font_sz - 1, family="Arial"),
+                            showline=True, linewidth=1, linecolor=_c["line"], mirror=True,
+                            tickfont=dict(size=mp_font_sz - 1, family="Arial", color=_c["text"]),
                             title_text="<b>Wavelength (nm)</b>",
-                            title_font=dict(size=mp_font_sz, family="Arial")
+                            title_font=dict(size=mp_font_sz, family="Arial", color=_c["text"])
                         )
                         # Only show x-title on bottom row
                         for r_i in range(1, rows_mp):
@@ -2868,7 +3162,7 @@ else:
                             fig_sub.update_yaxes(range=[y_min, y_max])
 
                         # Zero reference line always visible regardless of grid setting
-                        fig_sub.add_hline(y=0, line_dash="dash", line_color="black",
+                        fig_sub.add_hline(y=0, line_dash="dash", line_color=_c["text"],
                                           line_width=1, opacity=0.4)
 
                         st.plotly_chart(fig_sub, use_container_width=False,
@@ -2887,7 +3181,7 @@ else:
                         except: pass
 
             # ── TAB 3: SPECTRAL LANDSCAPE (COMPOSITE DISCRETE PROJECTION) ─────
-            with tab3:
+            if _th_tab == "🗺️ λ–T Spectromap":
                 st.subheader(f"🗺️ λ–T Spectromap — {selected_name}")
                 st.markdown(
                     "This composite visualization replicates the discrete projection style used in advanced spectroscopic publications. "
@@ -3002,7 +3296,7 @@ else:
                         fig_comp.add_trace(go.Scatter(x=wl_grid, y=np.full_like(wl_grid, offset), mode='lines', line=dict(width=0), showlegend=False, hoverinfo='skip'), row=1, col=1)
                         fig_comp.add_trace(go.Scatter(x=wl_grid, y=y_neg, mode='lines', line=dict(color=neg_col_line, width=1.5), fill='tonexty', fillcolor=neg_col_fill, name=f"{display_label} (-)", showlegend=False), row=1, col=1)
                         
-                        fig_comp.add_trace(go.Scatter(x=[wl_grid[0], wl_grid[-1]], y=[offset, offset], mode='lines', line=dict(color='black', width=1, dash='solid'), opacity=0.2, showlegend=False, hoverinfo='skip'), row=1, col=1)
+                        fig_comp.add_trace(go.Scatter(x=[wl_grid[0], wl_grid[-1]], y=[offset, offset], mode='lines', line=dict(color=_c["text"], width=1, dash='solid'), opacity=0.2, showlegend=False, hoverinfo='skip'), row=1, col=1)
 
                     # 2. POPULATE BOTTOM PANEL (Discrete Heatmap)
                     zmin_val = float(np.nanmin(z_arr))
@@ -3015,8 +3309,8 @@ else:
                         z=z_arr, x=wl_grid, y=tick_text,
                         colorscale=colorscale, zmin=zmin_val, zmax=zmax_val,
                         colorbar=dict(
-                            title=dict(text=f"<b>{y_lbl_short}</b>", side="right", font=dict(size=12, family="Arial", color="black")),
-                            tickfont=dict(size=11, family="Arial", color="black"),
+                            title=dict(text=f"<b>{y_lbl_short}</b>", side="right", font=dict(size=12, family="Arial", color=_c["text"])),
+                            tickfont=dict(size=11, family="Arial", color=_c["text"]),
                             thickness=15, len=0.35, y=0.15 
                         ),
                         xgap=0, ygap=3 
@@ -3024,18 +3318,19 @@ else:
 
                     # --- STYLING & LAYOUT ---
                     fig_comp.update_layout(
-                        title=dict(text=f"<b>Discrete Spectral Projection — {selected_name}</b>", x=0.5, font=dict(family="Arial", size=18, color="black")),
-                        template="simple_white",
+                        title=dict(text=f"<b>Discrete Spectral Projection — {selected_name}</b>", x=0.5, font=dict(family="Arial", size=18, color=_c["text"])),
+                        template=_c["template"],
+                        paper_bgcolor=_c["paper"],
+                        plot_bgcolor=_c["bg"],
                         height=fig_height,
-                        margin=dict(l=80, r=40, t=60, b=60),
-                        plot_bgcolor='white'
+                        margin=dict(l=80, r=40, t=60, b=60)
                     )
                     
-                    fig_comp.update_xaxes(showline=True, linewidth=2, linecolor="black", mirror=True, showgrid=False, range=[wl_min, wl_max], row=1, col=1)
-                    fig_comp.update_xaxes(title_text="<b>Wavelength (nm)</b>", title_font=dict(size=16, family="Arial", color="black"), tickfont=dict(size=14, family="Arial", color="black"), showline=True, linewidth=2, linecolor="black", mirror=True, showgrid=False, range=[wl_min, wl_max], row=2, col=1)
+                    fig_comp.update_xaxes(showline=True, linewidth=2, linecolor=_c["line"], mirror=True, showgrid=False, range=[wl_min, wl_max], row=1, col=1)
+                    fig_comp.update_xaxes(title_text="<b>Wavelength (nm)</b>", title_font=dict(size=16, family="Arial", color=_c["text"]), tickfont=dict(size=14, family="Arial", color=_c["text"]), showline=True, linewidth=2, linecolor=_c["line"], mirror=True, showgrid=False, range=[wl_min, wl_max], row=2, col=1)
                     
-                    fig_comp.update_yaxes(title_text="<b>Temperature (°C)</b>", tickmode='array', tickvals=tick_vals, ticktext=tick_text, showline=True, linewidth=2, linecolor="black", mirror=True, showgrid=False, zeroline=False, tickfont=dict(size=12, family="Arial", color="black"), row=1, col=1)
-                    fig_comp.update_yaxes(showline=True, linewidth=2, linecolor="black", mirror=True, showgrid=False, tickfont=dict(size=12, family="Arial", color="black"), row=2, col=1)
+                    fig_comp.update_yaxes(title_text="<b>Temperature (°C)</b>", tickmode='array', tickvals=tick_vals, ticktext=tick_text, showline=True, linewidth=2, linecolor=_c["line"], mirror=True, showgrid=False, zeroline=False, tickfont=dict(size=12, family="Arial", color=_c["text"]), row=1, col=1)
+                    fig_comp.update_yaxes(showline=True, linewidth=2, linecolor=_c["line"], mirror=True, showgrid=False, tickfont=dict(size=12, family="Arial", color=_c["text"]), row=2, col=1)
 
                     st.plotly_chart(fig_comp, use_container_width=True, key=f"tab3_comp_{selected_name}")
 
@@ -3052,7 +3347,7 @@ else:
                     except: pass
 
 
-            with tab4:
+            if _th_tab == "📊 λ Peak Tracking":
                 st.subheader("📊 λ Peak Tracking")
                 st.caption(
                     "Tracks how peak **position (wavelength)** and **intensity** shift with temperature. "
@@ -3123,7 +3418,7 @@ else:
                         pt_colors = {sn: _PT_PALETTE[i % len(_PT_PALETTE)]
                                      for i, sn in enumerate(pt_samples)}
 
-                        _mk = dict(size=8, symbol="circle", line=dict(width=1, color="black"))
+                        _mk = dict(size=8, symbol="circle", line=dict(width=1, color=_c["line"]))
 
                         # ─────────────────────────────────────────────────────
                         # SECTION 1 — Dual-axis plots (λ position + intensity)
@@ -3291,7 +3586,7 @@ else:
                                     showlegend=True,
                                     line=dict(color=col, width=2.5, dash="dash"),
                                     marker=dict(size=8, symbol="diamond",
-                                                line=dict(width=1, color="black"),
+                                                line=dict(width=1, color=_c["line"]),
                                                 color=col)
                                 ), secondary_y=True)
 
@@ -3309,13 +3604,15 @@ else:
                                 title=dict(
                                     text=f"<b>{title}</b>",
                                     x=0.5, xanchor="center",
-                                    font=dict(size=18, family="Arial", color="black")
+                                    font=dict(size=18, family="Arial", color=_c["text"])
                                     # ↑ y / yanchor / yref intentionally omitted —
                                     #   Plotly places the title in t_margin space.
                                 ),
-                                template="simple_white",
+                                template=_c["template"],
+                        paper_bgcolor=_c["paper"],
+                        plot_bgcolor=_c["bg"],
                                 height=fig_height,
-                                font=dict(family="Arial", size=13, color="black"),
+                                font=dict(family="Arial", size=13, color=_c["text"]),
                                 # Legend: horizontal bar sitting above the top axis.
                                 # y > 1.0 means above the plot area (plot area = 0–1).
                                 # yanchor="bottom" anchors the legend BOX bottom at y,
@@ -3327,7 +3624,7 @@ else:
                                     yanchor="bottom",
                                     # No yref override — default paper coords work correctly
                                     font=dict(size=11, family="Arial"),
-                                    bordercolor="black",
+                                    bordercolor=_c["legend_border"],
                                     borderwidth=1,
                                     tracegroupgap=2
                                 ),
@@ -3341,26 +3638,26 @@ else:
                             # mirror=True closes the top edge of the plot as a full box
                             fig_da.update_xaxes(
                                 title_text="<b>Temperature (°C)</b>",
-                                showline=True, linewidth=2, linecolor="black",
+                                showline=True, linewidth=2, linecolor=_c["line"],
                                 mirror=True,
-                                showgrid=True, gridcolor="lightgray",
-                                tickfont=dict(size=12, family="Arial", color="black")
+                                showgrid=True, gridcolor=_c["grid"],
+                                tickfont=dict(size=12, family="Arial", color=_c["text"])
                             )
                             fig_da.update_yaxes(
                                 title_text="<b>Wavelength (nm)</b>",
-                                showline=True, linewidth=2, linecolor="black",
+                                showline=True, linewidth=2, linecolor=_c["line"],
                                 mirror=False,
-                                showgrid=True, gridcolor="lightgray",
-                                tickfont=dict(size=12, family="Arial", color="black"),
+                                showgrid=True, gridcolor=_c["grid"],
+                                tickfont=dict(size=12, family="Arial", color=_c["text"]),
                                 secondary_y=False
                             )
                             fig_da.update_yaxes(
                                 title_text=f"<b>Intensity ({y_lbl_short})</b>",
-                                showline=True, linewidth=2, linecolor="black",
+                                showline=True, linewidth=2, linecolor=_c["line"],
                                 mirror=False,
                                 showgrid=False,
                                 zeroline=False,
-                                tickfont=dict(size=12, family="Arial", color="black"),
+                                tickfont=dict(size=12, family="Arial", color=_c["text"]),
                                 secondary_y=True
                             )
                             # Apply user-specified axis ranges from the scale expanders
@@ -3427,7 +3724,7 @@ else:
                                     mode="lines+markers", name=sn,
                                     line=dict(color=col, width=2.5, dash=dash),
                                     marker=dict(size=8, symbol=symbol,
-                                                line=dict(width=1, color="black"), color=col)
+                                                line=dict(width=1, color=_c["text"]), color=col)
                                 ))
                             fig_s = apply_publication_style(
                                 fig_s, title, "Temperature (°C)", y_label,
@@ -3524,8 +3821,8 @@ else:
                             horizontal_spacing=0.14
                         )
 
-                        _mk_combo = dict(size=7, symbol="circle", line=dict(width=1, color="black"))
-                        _mk_combo_dia = dict(size=7, symbol="diamond", line=dict(width=1, color="black"))
+                        _mk_combo = dict(size=7, symbol="circle", line=dict(width=1, color=_c["line"]))
+                        _mk_combo_dia = dict(size=7, symbol="diamond", line=dict(width=1, color=_c["line"]))
 
                         for sn in pt_samples:
                             if sn not in all_peak_stats:
@@ -3567,38 +3864,40 @@ else:
                             ), row=2, col=2)
 
                         # Axis styling per panel
-                        _ax_common = dict(showline=True, linewidth=2, linecolor="black",
-                                          mirror=True, showgrid=True, gridcolor="lightgray",
-                                          tickfont=dict(size=11, family="Arial", color="black"))
-                        for _r, _c, _yt in [
+                        _ax_common = dict(showline=True, linewidth=2, linecolor=_c["line"],
+                                          mirror=True, showgrid=True, gridcolor=_c["grid"],
+                                          tickfont=dict(size=11, family="Arial", color=_c["text"]))
+                        for _r, _col, _yt in [
                             (1, 1, "<b>Wavelength (nm)</b>"),
                             (1, 2, "<b>Wavelength (nm)</b>"),
                             (2, 1, f"<b>{y_lbl_short}</b>"),
                             (2, 2, f"<b>{y_lbl_short}</b>"),
                         ]:
-                            fig_combo.update_yaxes(title_text=_yt, **_ax_common, row=_r, col=_c)
+                            fig_combo.update_yaxes(title_text=_yt, **_ax_common, row=_r, col=_col)
                         for _r in [1, 2]:
-                            for _c in [1, 2]:
+                            for _col in [1, 2]:
                                 _xt = "<b>Temp (°C)</b>" if _r == 2 else ""
-                                fig_combo.update_xaxes(title_text=_xt, **_ax_common, row=_r, col=_c)
+                                fig_combo.update_xaxes(title_text=_xt, **_ax_common, row=_r, col=_col)
 
                         # Shift subplot title annotations upward so they clear the axis area
                         for ann in fig_combo.layout.annotations:
-                            ann.update(yshift=8, font=dict(size=13, family="Arial", color="black"))
+                            ann.update(yshift=8, font=dict(size=13, family="Arial", color=_c["text"]))
 
                         sample_label = " vs ".join(pt_samples) if len(pt_samples) > 1 else pt_samples[0]
                         fig_combo.update_layout(
                             title=dict(
                                 text=f"<b>Peak Tracking Summary — {sample_label}</b>",
                                 x=0.5, xanchor="center",
-                                font=dict(size=18, family="Arial", color="black")
+                                font=dict(size=18, family="Arial", color=_c["text"])
                             ),
-                            template="simple_white",
+                            template=_c["template"],
+                        paper_bgcolor=_c["paper"],
+                        plot_bgcolor=_c["bg"],
                             # Taller figure gives each subplot more breathing room
                             height=820,
-                            font=dict(family="Arial", size=12, color="black"),
+                            font=dict(family="Arial", size=12, color=_c["text"]),
                             showlegend=(len(pt_samples) > 1),
-                            legend=dict(font=dict(size=12), bordercolor="black", borderwidth=1,
+                            legend=dict(font=dict(size=12), bordercolor=_c["legend_border"], borderwidth=1,
                                         x=1.01, y=0.5, xanchor="left"),
                             # Large top margin keeps main title clear of first row subplot titles
                             margin=dict(l=75, r=120 if len(pt_samples) > 1 else 40, t=100, b=70)
@@ -3634,7 +3933,7 @@ else:
                         )
                 
             # ── TAB 5: SECONDARY STRUCTURE vs TEMPERATURE ────────────────────
-            with tab5:
+            if _th_tab == "🧩 Sec. Structure":
                 st.subheader("🧩 Secondary Structure vs Temperature")
                 st.info(
                     "Estimates secondary structure at each temperature using NNLS and "
@@ -3712,7 +4011,7 @@ else:
 
                         # Marker spec — circle with black border on each data point
                         _mk = dict(size=7, symbol="circle",
-                                   line=dict(width=1, color="black"))
+                                   line=dict(width=1, color=_c["line"]))
 
                         if ss_view == "All components per sample":
                             # One plot per sample, all 3 components, lines+markers
@@ -3867,7 +4166,7 @@ else:
                             except: pass
                             st.divider()
 
-            with tab6:
+            if _th_tab == "⚗️ Thermodynamics":
                 st.subheader("⚗️ Apparent ΔG — Model-Dependent Thermodynamics")
 
                 # ── EXPERIMENT TYPE & SCIENTIFIC CONTEXT ──────────────────────────────
@@ -4085,7 +4384,7 @@ else:
                                 x=results[sname]["temp"], y=results[sname]["sig"],
                                 mode='markers', name=f"{sname} data",
                                 marker=dict(color=_col, size=8, symbol='circle',
-                                            line=dict(width=1, color='black'))))
+                                            line=dict(width=1, color=_c["text"]))))
                             if sname in fit_results:
                                 fig_mre.add_trace(go.Scatter(
                                     x=results[sname]["temp"],
@@ -4119,13 +4418,13 @@ else:
                                     mode='lines+markers', name=sname,
                                     line=dict(color=_col, width=2.5),
                                     marker=dict(size=8, color=_col, symbol='circle',
-                                                line=dict(width=1, color='black'))))
+                                                line=dict(width=1, color=_c["text"]))))
                         _dg_lbl = "Apparent ΔG" if model_type == "Two-state (van't Hoff)" else "Qualitative ΔG"
                         fig_dg = apply_plot_style_custom(
                             fig_dg, style_dg, f"{_dg_lbl} vs Temperature",
                             "Temp (°C)", f"{_dg_lbl} (kcal/mol) @ {melt_wl:.1f} nm",
                             plot_mode='lines+markers')
-                        fig_dg.add_hline(y=0, line_dash="dash", line_color="black")
+                        fig_dg.add_hline(y=0, line_dash="dash", line_color=_c["text"])
                         st.plotly_chart(fig_dg, use_container_width=True)
                         try:
                             _dd1, _dd2 = st.columns(2)
@@ -4150,7 +4449,7 @@ else:
                                 fig_res, "Fit Residuals",
                                 "Temp (°C)", "Residual (data − fit)",
                                 show_grid, height=380, plot_mode="lines+markers")
-                            fig_res.add_hline(y=0, line_dash="dash", line_color="black", opacity=0.6)
+                            fig_res.add_hline(y=0, line_dash="dash", line_color=_c["text"], opacity=0.6)
                             st.plotly_chart(fig_res, use_container_width=True, key="tab6_residuals")
                             st.caption(
                                 "Residuals should be randomly scattered around zero. "
@@ -4211,7 +4510,7 @@ else:
                         fig_ddg, style_ddg, dynamic_title,
                         "Temperature (°C)", f"ΔΔG (kcal/mol) @ {melt_wl:.1f} nm",
                         plot_mode='lines+markers')
-                    fig_ddg.add_hline(y=0, line_dash="dash", line_color="black")
+                    fig_ddg.add_hline(y=0, line_dash="dash", line_color=_c["text"])
                     st.plotly_chart(fig_ddg)
                     if ddg_list:
                         df_ddg = pd.DataFrame(ddg_list)
@@ -4254,7 +4553,7 @@ else:
                     """)
 
 
-            with tab7:
+            if _th_tab == "🔮 Spectral Simulation":
                 st.subheader("🔮 Thermodynamic Spectral Simulation")
                 st.markdown("""
                 **Methodology:** This module uses continuous mathematical interpolation across the entire temperature gradient to accurately simulate the CD spectrum at unmeasured intermediate temperatures. 
@@ -4313,7 +4612,7 @@ else:
                     fig_sim.add_trace(go.Scatter(x=curr_wl, y=simulated_sig, mode='lines', name=f"Simulated {target_temp}°C", line=dict(color=style_sim["color"], width=3)))
                     
                     fig_sim = apply_plot_style_custom(fig_sim, style_sim, f"Simulated Spectrum ({target_temp} °C)", "Wavelength (nm)", y_lbl_full, plot_mode='lines')
-                    fig_sim.add_hline(y=0, line_dash="dash", line_color="black")
+                    fig_sim.add_hline(y=0, line_dash="dash", line_color=_c["text"])
                     fig_sim.update_xaxes(range=[wl_min, wl_max])
                     if not y_auto: fig_sim.update_yaxes(range=[y_min, y_max])
                     
@@ -4379,7 +4678,25 @@ else:
             )
             path_rev = st.number_input("Path (cm)", 0.1, key="rev_path")
             conc_rev = st.number_input("Conc (µM)", 50.0, key="rev_conc")
-            res_rev  = st.number_input("Residues", 6, key="rev_res")
+            # --- SMART SEQUENCE PARSER (Reversibility) ---
+            seq_input_rev = st.text_input("Peptide Sequence (Optional)", key="rev_seq", placeholder="e.g., ALYFWC...")
+            clean_seq_rev = "".join([char.upper() for char in seq_input_rev if char.isalpha()])
+            
+            if clean_seq_rev:
+                res_rev = len(clean_seq_rev)
+                num_W = clean_seq_rev.count('W')
+                num_Y = clean_seq_rev.count('Y')
+                num_C = clean_seq_rev.count('C')
+                ext_coeff = (num_W * 5500) + (num_Y * 1490) + (int(num_C / 2) * 125)
+                mw_est = (res_rev * 110) + 18
+                
+                st.info(f"✅ **Auto-counted: {res_rev} residues**")
+                c_seq1, c_seq2 = st.columns(2)
+                c_seq1.caption(f"🧮 **ε₂₈₀:** {ext_coeff} M⁻¹cm⁻¹")
+                c_seq2.caption(f"⚖️ **MW:** ~{mw_est} Da")
+            else:
+                res_rev = st.number_input("Or enter number of residues manually:", value=6, key="rev_res_manual")
+            # ---------------------------------------------
 
 
             # ── INPUT FORMAT: AUTO-DETECT for BOTH files ──────────────────
@@ -4557,7 +4874,7 @@ else:
                 fig_rev = apply_publication_style(fig_rev, "Reversibility Check",
                                                   "Wavelength (nm)", _rev_ylbl, _rev_grid, plot_mode="lines")
                 # Zero reference line always visible regardless of grid setting
-                fig_rev.add_hline(y=0, line_dash="dash", line_color="black", line_width=1, opacity=0.5)
+                fig_rev.add_hline(y=0, line_dash="dash", line_color=_c["text"], line_width=1, opacity=0.5)
                 # Apply axis ranges
                 fig_rev.update_xaxes(range=[_rev_xmin, _rev_xmax])
                 if not _rev_yauto:
