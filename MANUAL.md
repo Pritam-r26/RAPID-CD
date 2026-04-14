@@ -1,6 +1,6 @@
-# RAPID-CD User Manual
+# RAPID-CD User Manual  — v1.2
 
-## Rapid Analysis Pipeline for Interpreting Dichroism — v1.0
+## Rapid Analysis Pipeline for Interpreting Dichroism — v1.2
 
 **Author:** Pritam Roy, Sorbonne University, Paris, France  
 **Last updated:** 2026
@@ -46,6 +46,13 @@ RAPID-CD is designed as an end-to-end preprocessing and visualisation pipeline t
 * Replacing established deconvolution algorithms (BeStSel, CDSSTR) for quantitative secondary structure determination
 * Absolute thermodynamic measurements without a sigmoidal melting transition
 * Analysing data that has not been properly baseline-corrected for buffer absorption
+
+**Performance note (v1.2):** The module navigation tabs have been rebuilt using
+`st.radio()` buttons rather than `st.tabs()`. This means only the currently
+selected analysis panel is computed and rendered — switching between panels
+is significantly faster on datasets with many samples or temperature points.
+The visual appearance is a horizontal row of buttons at the top of the main
+panel rather than traditional tabs; the functionality is identical.
 
 \---
 
@@ -164,6 +171,16 @@ The sidebar also provides a **mode switcher** (radio buttons) to move between mo
 |File uploader|`.txt` file (JASCO format)|
 |Blank file|Optional buffer spectrum for subtraction|
 |Colour|Line colour in overlay plots|
+| Peptide Sequence (Optional) | Type or paste the one-letter amino acid sequence (e.g. `ACDEFWY`). The software counts residues automatically and pre-fills the residue field. Also calculates ε₂₈₀ and estimated MW. Leave blank to enter residues manually. |
+| ε₂₈₀ (auto) | Molar extinction coefficient at 280 nm: ε = (W × 5500) + (Y × 1490) + (⌊C/2⌋ × 125). Displayed automatically when a sequence is entered. Useful for concentration verification by absorbance. |
+| MW estimate (auto) | Approximate molecular weight: n_res × 110 + 18 Da. Displayed automatically. |
+
+Then add this note:
+
+> **High aromatic content warning:** If Trp + Tyr residues exceed 15% of total
+> sequence length, a warning is shown: near-UV aromatic side-chain signals can
+> distort the far-UV 222 nm helical band and should be considered when
+> interpreting secondary structure results.
 
 **Processing panel:**
 
@@ -266,6 +283,10 @@ Formats data for direct upload to external servers:
 
 **Per-sample settings:**
 
+The same sequence input field available in General Analysis is also present
+for each thermal sample. Entering the sequence auto-fills the residue count
+and displays ε₂₈₀ and MW, removing the need to count residues manually before
+entering thermal melt parameters.
 |Field|Description|
 |-|-|
 |Name|Sample label|
@@ -281,9 +302,18 @@ Formats data for direct upload to external servers:
 
 |Control|Description|
 |-|-|
-|Output Metric|MRE, mdeg, Δε, HT, Abs|
-|Pathlength (cm)|Cuvette pathlength|
-|Apply Smoothing|Savitzky-Golay or LOWESS|
+| Output Metric | Source channel in JASCO file | Notes |
+|--------------|------------------------------|-------|
+| MRE | Channel 1 (CD, mdeg) | Standard publication metric — requires concentration and pathlength |
+| Raw (mdeg) | Channel 1 (CD, mdeg) | No normalisation applied |
+| Δε (M⁻¹cm⁻¹) | Channel 1 (CD, mdeg) | Molar CD — converted from mdeg |
+| **HT** | **Channel 2** | High-tension voltage — diagnostic channel. Blank subtraction is NOT applied. Values > 600 V indicate the detector is saturated. |
+| **Abs** | **Channel 3** | Absorbance — diagnostic channel. Blank subtraction is NOT applied. |
+
+> **Important (v1.2 fix):** Previous versions of RAPID-CD incorrectly returned
+> CD data when HT or Abs was selected for multi-column JASCO thermal files.
+> This has been corrected. The software now reads Channel 2 for HT and
+> Channel 3 for Abs from the JASCO file header.
 
 ### 6.2 Plot Customization Expander
 
@@ -612,6 +642,23 @@ The curve does not contain a detectable transition in the measured window. The f
 ### "Could not save session" warning
 
 This is a non-fatal warning. The session download only saves numeric and text widget states, not uploaded files. This feature is provided as a convenience reference.
+
+### HT or Absorbance data looks identical to CD signal
+
+**Cause (before v1.2):** The software was reading Channel 1 (CD) regardless
+of the selected metric. This has been fixed in v1.2.
+
+**If you still see identical data:** Check that your JASCO file contains
+multiple data channels. Open the raw `.txt` file in a text editor and look
+for `Channel 2` and `Channel 3` headers. If your file only has one channel,
+the instrument was set to record CD only — HT and Abs data were not saved.
+
+### Residue count seems wrong
+
+If you entered a sequence but the residue count appears incorrect, check:
+- The sequence field accepts single-letter amino acid codes only (A, C, D, E, ... Y)
+- Numbers, spaces, dashes, and other characters are silently ignored
+- The count shown is the number of recognised amino acid letters
 
 \---
 
