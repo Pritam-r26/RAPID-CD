@@ -25,7 +25,7 @@ SOFTWARE.
 SCIENTIFIC DISCLAIMER
 ---------------------
 RAPID-CD is a research tool designed to assist in the preliminary processing and
-visualization of circular dichroism spectroscopy data. All thermodynamic
+visualisation of circular dichroism spectroscopy data. All thermodynamic
 parameters (ΔG, ΔΔG, Tm) produced by this software are model-dependent apparent
 quantities and should be interpreted as comparative rather than absolute
 thermodynamic parameters. The software does not replace expert scientific
@@ -37,3 +37,4 @@ are qualitative indicators only and should not be used as the primary method
 for secondary structure determination in published research without corroboration
 from established deconvolution servers (BeStSel, DichroWeb) or complementary
 methods.
+
