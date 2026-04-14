@@ -7,6 +7,8 @@
 [!\[License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/version-1.2-green)](CHANGELOG.md)
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19568409.svg)](https://doi.org/10.5281/zenodo.19568409)
+
 **RAPID-CD** is a locally-executed, privacy-centric web application for the processing, visualisation, and preliminary analysis of circular dichroism (CD) spectroscopy data from peptides and small proteins.
 
 > All computation is performed locally on your machine. No experimental data is transmitted to any external server.
