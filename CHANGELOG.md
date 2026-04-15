@@ -25,6 +25,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### General Analysis — Manual Colour Per Sample
 - Updated the per-sample colour picker in the sidebar so that each sample's trace colour can be changed manually and the change is immediately reflected in all overlay plots without needing to reprocess.
 
+### General Analysis — Tab Renamed: Statistics → Peak Analysis
+- The "Statistics" tab has been renamed to "📍 Peak Analysis" to reflect its actual function better. The tab computes and compares spectral peak positions (minima and maxima wavelengths) across samples — it does not perform statistical calculations. The new name matches the terminology used in the Thermal Analysis module and is consistent with the Peak Search Range expander above it.
+
+### General Analysis — Literature Discovery: Minima and Maxima Search
+
+-The Literature Discovery tool previously searched Google Scholar using only the primary spectral minimum. Users can now choose between Primary Minima and Primary Maxima as the search feature via a radio button.
+-If the Peak Search Range expander has been used to restrict the wavelength window for either minima or maxima, the literature search automatically uses those restricted values rather than the full-range defaults. The search range note displayed to the user reflects this explicitly (e.g. "restricted to 205–230 nm").
+-A warning is shown if the selected feature (minimum or maximum) was not detected for a sample, with a prompt to adjust the Peak Search Range.
+
 ### Thermal Analysis — HT and Absorbance Channel Fix
 - **Root cause identified and fixed:** JASCO multi-column thermal files store CD in Channel 1, HT (voltage) in Channel 2, and Absorbance in Channel 3. The previous implementation read only Channel 1 regardless of the selected output metric, which meant HT and Abs values were silently wrong (returning CD data instead).
 - Added `_read_thermal_channel_cached()` and `read_thermal_channel()` functions that parse the correct channel from the JASCO file header based on the selected metric.
