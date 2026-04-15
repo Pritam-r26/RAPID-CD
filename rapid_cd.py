@@ -47,7 +47,7 @@ Citation
 --------
   If you use RAPID-CD in published research, please cite:
   Roy, P. (2026). RAPID-CD: Rapid Analysis Pipeline for Interpreting Dichroism.
-  Sorbonne University. https://github.com/pritam-r26/RAPID-CD
+  Zenodo. https://doi.org/10.5281/zenodo.19568409
 
   Additionally cite the underlying methods as appropriate (see the in-app
   References section under General Analysis → Secondary Structure).
@@ -58,11 +58,11 @@ License
 
 Changelog
 ---------
-  v1.0  (2025) — Initial public release.
-                 Automatic Δε / mdeg header detection.
-                 Three-way unit conversion across all modules.
-                 Optional base-curve in Separate panel.
-                 Auto-positioned multi-panel axis labels.
+  v1.2  (2026) — Updated from v1.0
+                 Navigation tabs replaced with st.radio() buttons
+                 Added a dark-background CSS media query
+                 HT and Abs fixed for Thermal analysis
+                 Sequence to residue
                  2×2 batch statistics panel export.
 """
 
@@ -83,7 +83,7 @@ import io
 import datetime
 
 # ── SECTION 1: CONFIGURATION, PAGE SETUP & REFERENCE DATA ───────────────────
-st.set_page_config(page_title="RAPID-CD v1.0", layout="wide", page_icon="🧬")
+st.set_page_config(page_title="RAPID-CD v1.2", layout="wide", page_icon="🧬")
 
 st.markdown("""
 <style>
@@ -940,7 +940,7 @@ if st.session_state.page == "Home":
         1. **Select a Module:** Click a button above based on your experiment type.
         2. **Upload Data:** Use the sidebar to upload raw `.txt` files (Jasco format supported).
         3. **Set Parameters:** Input concentration and pathlength carefully for accurate MRE calculations.
-        4. **Analyze:** Use the tabs to view Overlays, Statistics, and Structure estimations.
+        4. **Analyze:** Use the tabs to view Overlays, Peak Analysis, and Structure estimations.
         5. **Download:** Export your processed plots and high-resolution publication figures.
         6. **For Reversibility Analysis:** Upload a single multi-panel file containing both pre-melt and post-melt spectra recorded at the same temperature.
         """)
@@ -949,7 +949,7 @@ if st.session_state.page == "Home":
         st.markdown("""
         **If you use this software in your research, please cite the application and the implemented biophysical methods:**
         
-        * **Software:** Pritam Roy [Sorbonne University], "RAPID-CD: Peptide CD Analysis Suite", (2026).
+        * **Software:** * **Software:** P. Roy, "RAPID-CD: Rapid Analysis Pipeline for Interpreting Dichroism". Zenodo, Apr. 2026. doi: [10.5281/zenodo.19568409](https://doi.org/10.5281/zenodo.19568409).
         * **Thermodynamics & Melt Analysis:** Greenfield, N. J. (2006). Using circular dichroism spectra to estimate protein secondary structure. *Nature Protocols*, 1(6), 2876-2890.
         * **Internal NNLS Deconvolution:** Sreerama, N., & Woody, R. W. (2000). Estimation of protein secondary structure from circular dichroism spectra. *Analytical Biochemistry*, 287(2), 252-260.
         * **Basis Spectra (Helix/Sheet/Coil):** Brahms, S., & Brahms, J. G. (1980). Determination of protein secondary structure in solution by vacuum ultraviolet circular dichroism. *Journal of Molecular Biology*, 138(2), 149-178.
@@ -968,11 +968,11 @@ if st.session_state.page == "Home":
         All processing is performed on the user's own machine — no data is transmitted to external servers, ensuring full confidentiality of unpublished experimental data. RAPID-CD is designed as an end-to-end preprocessing and visualisation pipeline, bridging the gap between raw instrument output and submission-ready formatting for established deconvolution servers including BeStSel and DichroWeb.
 
         **Developed by:** Pritam Roy, Sorbonne University, Paris, France.
-        **Contact / Citation:** Please refer to the documentation for citation guidance.
+        **Contact:** Pritam Roy. (2026). RAPID-CD: Rapid Analysis Pipeline for Interpreting Dichroism. Zenodo. https://doi.org/10.5281/zenodo.19568409
         """)
         
     st.markdown("---")
-    st.caption("**RAPID-CD v1.0 | Pritam Roy, Sorbonne University | Rapid Analysis Pipeline for Interpreting Dichroism | Compatible with JASCO & Standard Text Data**")
+    st.caption("**RAPID-CD v1.2 | Pritam Roy, Sorbonne University | doi: 10.5281/zenodo.19568409 | Compatible with JASCO & Standard Text Data**")
 
 # ── SECTION 4: ANALYSIS MODULES (General / Thermal / Reversibility) ──────────
 else:
@@ -1318,7 +1318,7 @@ else:
             )
             _ga_tab = st.radio(
                 "Select View",
-                ["📊 Overlay", "🔲 Separate", "📝 Statistics",
+                ["📊 Overlay", "🔲 Separate", "📝 Peak Analysis",
                  "🧩 Sec. Structure", "🔗 Similarity", "🗺️ Spectral Projection"],
                 horizontal=True, key="ga_tab_radio",
                 label_visibility="collapsed"
@@ -1656,7 +1656,7 @@ else:
                         except: pass
 
 
-            if _ga_tab == "📝 Statistics":
+            if _ga_tab == "📝 Peak Analysis":
                 stats_rows = []
                 for p in final_curves:
                     if len(p["wl"]) > 0:
@@ -1739,7 +1739,7 @@ else:
                         try: st.download_button("DL Max Intensity (JPG)", fig_max2.to_image(format="jpg", scale=3), "max_intensity.jpg", "image/jpeg", key="dl_max_v")
                         except: pass
 
-                    # Batch export: 2x2 combined statistics panel
+                    # Batch export: 2x2 combined peak analysis panel
                     st.divider()
                     st.markdown("##### 📦 Download All Four Spectra as a Combined Panel")
                     st.caption("Generates a single high-resolution 2×2 panel combining Lambda Minima, Min Intensity, Lambda Maxima, and Max Intensity.")
@@ -1804,7 +1804,7 @@ else:
                         paper_bgcolor=_c["paper"],
                         plot_bgcolor=_c["bg"],
                             title=dict(
-                                text="<b>Spectral Statistics Summary</b>",
+                                text="<b>Peak Analysis Summary</b>",
                                 x=0.5, xanchor="center",
                                 font=dict(family="Arial", size=20, color=_c["text"])
                             ),
@@ -1831,33 +1831,84 @@ else:
                 for p in final_curves: de[p["name"]] = p["stat_sig"]
                 st.download_button("Download Full CSV", de.to_csv(index=False).encode('utf-8'), "cd_data.csv", "text/csv")
                 
-                # Literature discovery: generate Google Scholar query from primary minimum
+                # Literature discovery: search by primary minima OR maxima
                 if stats_rows:
                     st.divider()
                     st.markdown("##### 📚 Literature Discovery")
-                    st.caption("Automatically search Google Scholar for peptides with similar primary spectral minima.")
-                    
-                    search_target = st.selectbox("Select sample to query:", [s["Sample"] for s in stats_rows], key="lit_search_sel")
+                    st.caption(
+                        "Automatically search Google Scholar for peptides with similar "
+                        "spectral features. If you used the Peak Search Range above to "
+                        "restrict the search window, that custom range is reflected here."
+                    )
+
+                    _lit_c1, _lit_c2 = st.columns(2)
+                    with _lit_c1:
+                        search_target = st.selectbox(
+                            "Select sample to query:",
+                            [s["Sample"] for s in stats_rows],
+                            key="lit_search_sel"
+                        )
+                    with _lit_c2:
+                        lit_feature = st.radio(
+                            "Search by:",
+                            ["Primary Minima", "Primary Maxima"],
+                            horizontal=True,
+                            key="lit_feature_radio",
+                            help=(
+                                "Primary Minima: useful for α-helix (208/222 nm) and β-sheet (216 nm). "
+                                "Primary Maxima: useful for PPII (218 nm positive) and β-turn "
+                                "identification where the positive band is diagnostic."
+                            )
+                        )
+
                     target_data = next(s for s in stats_rows if s["Sample"] == search_target)
-                    
-                    min_wl = target_data.get("Lambda Min 1 (nm)")
-                    
-                    if min_wl is not None and not pd.isna(min_wl):
-                        low_bound = int(min_wl - 3)
-                        high_bound = int(min_wl + 3)
-                        
-                        st.info(f"Target Primary Minima: **{min_wl} nm**. Searching literature for range: **{low_bound} nm to {high_bound} nm**.")
-                        
-                        wl_terms = " OR ".join([f'"{wl} nm"' for wl in range(low_bound, high_bound + 1)])
-                        query = f'"circular dichroism" peptide ({wl_terms})'
-                        
+
+                    # Pick the wavelength based on user's choice
+                    # If the user restricted the peak search range above, those
+                    # custom values flow through stats_rows automatically because
+                    # stats_rows is built from the same _ga_min_r / _ga_max_r variables.
+                    if lit_feature == "Primary Minima":
+                        search_wl   = target_data.get("Lambda Min 1 (nm)")
+                        feature_lbl = "Primary Minimum"
+                        range_note  = (
+                            f"(restricted to {_ga_min_r[0]}–{_ga_min_r[1]} nm)"
+                            if _ga_use_min else "(full wavelength range)"
+                        )
+                    else:
+                        search_wl   = target_data.get("Lambda Max (nm)")
+                        feature_lbl = "Primary Maximum"
+                        range_note  = (
+                            f"(restricted to {_ga_max_r[0]}–{_ga_max_r[1]} nm)"
+                            if _ga_use_max else "(full wavelength range)"
+                        )
+
+                    if search_wl is not None and not pd.isna(search_wl):
+                        low_bound  = int(search_wl - 3)
+                        high_bound = int(search_wl + 3)
+
+                        st.info(
+                            f"**{feature_lbl}:** {search_wl} nm {range_note}. "
+                            f"Searching literature for range: **{low_bound}–{high_bound} nm**."
+                        )
+
+                        wl_terms   = " OR ".join([f'"{wl} nm"' for wl in range(low_bound, high_bound + 1)])
+                        query      = f'"circular dichroism" peptide ({wl_terms})'
+
                         import urllib.parse
                         safe_query = urllib.parse.quote(query)
-                        url = f"https://scholar.google.com/scholar?q={safe_query}"
-                        
+                        url        = f"https://scholar.google.com/scholar?q={safe_query}"
+
                         st.markdown(
-                            f'<a href="{url}" target="_blank" style="display: inline-block; padding: 0.6em 1.2em; color: white; background-color: #4CAF50; border-radius: 5px; text-decoration: none; font-weight: bold; text-align: center;">🔍 Search Google Scholar for Similar Spectra</a>', 
+                            f'<a href="{url}" target="_blank" style="display: inline-block; '
+                            f'padding: 0.6em 1.2em; color: white; background-color: #4CAF50; '
+                            f'border-radius: 5px; text-decoration: none; font-weight: bold; '
+                            f'text-align: center;">🔍 Search Google Scholar for Similar Spectra</a>',
                             unsafe_allow_html=True
+                        )
+                    else:
+                        st.warning(
+                            f"⚠️ No {feature_lbl.lower()} found for **{search_target}**. "
+                            "Try adjusting the Peak Search Range expander above."
                         )
             
             if _ga_tab == "🧩 Sec. Structure":
