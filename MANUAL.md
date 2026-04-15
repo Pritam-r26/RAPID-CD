@@ -235,7 +235,7 @@ Displays each sample in its own subplot panel.
 * Optional: show a common base curve in all panels
 * X-axis label positioning is automatic
 
-#### Tab 3 — Statistics
+#### Tab 3 — Peak Analysis
 
 Comparative statistics across all samples:
 
@@ -243,6 +243,26 @@ Comparative statistics across all samples:
 * Bar charts for lambda minima and maxima comparison
 * Intensity bar charts
 * Downloadable 2×2 batch statistics figure
+
+#### Literature Discovery
+
+Appears at the bottom of the Peak Analysis tab after spectra are processed.
+Generates a Google Scholar search query based on the detected peak wavelength
+of a selected sample.
+
+| Control | Description |
+|---------|-------------|
+| Select sample | Choose which processed sample to query |
+| Search by | **Primary Minima** — useful for α-helix (208/222 nm) and β-sheet (216 nm). **Primary Maxima** — useful for PPII (~218 nm positive band) and β-turn identification |
+
+The search uses a ±3 nm window around the detected wavelength and constructs
+a query of the form: `"circular dichroism" peptide ("208 nm" OR "209 nm" OR ...)`.
+If you have restricted the Peak Search Range, that restriction is automatically
+reflected in the wavelength used for the query.
+
+Click the green **"Search Google Scholar"** button — it opens in a new browser
+tab. No data leaves your computer; only the wavelength range is sent as a
+search term.
 
 #### Tab 4 — Secondary Structure
 
@@ -666,7 +686,7 @@ If you entered a sequence but the residue count appears incorrect, check:
 
 If you use RAPID-CD in published research, cite the software:
 
-> Roy, P. (2026). \*RAPID-CD: Rapid Analysis Pipeline for Interpreting Dichroism\*. Sorbonne University. https://github.com/YOUR-USERNAME/RAPID-CD
+> Roy, P. (2026). \*RAPID-CD: Rapid Analysis Pipeline for Interpreting Dichroism\*. Zenodo, doi: [10.5281/zenodo.19568409](https://doi.org/10.5281/zenodo.19568409)
 
 Additionally, cite underlying methods based on what you used:
 
