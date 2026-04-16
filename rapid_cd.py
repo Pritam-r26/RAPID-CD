@@ -502,6 +502,7 @@ def _read_cd_file_cached(file_bytes: bytes):
         if not line.strip():
             continue
         clean_line = line.replace(",", ".")
+        clean_line = clean_line.replace(";", " ")  # <--- Line B (Your New Semicolon Fixer)
         parts = clean_line.split()
         try:
             nums = [float(p) for p in parts]
@@ -556,6 +557,7 @@ def _read_thermal_file_cached(file_bytes: bytes):
         if not line.strip() or "Channel" in line:
             break
         clean_line = line.replace(",", ".")
+        clean_line = clean_line.replace(";", " ")  # <--- Line B (Your New Semicolon Fixer)
         parts = clean_line.split()
         try:
             nums = [float(p) for p in parts]
@@ -610,6 +612,7 @@ def _read_thermal_channel_cached(file_bytes: bytes, channel: int):
         if not line.strip() or "Channel" in line:
             break
         clean_line = line.replace(",", ".")
+        clean_line = clean_line.replace(";", " ")  # <--- Line B (Your New Semicolon Fixer)
         parts = clean_line.split()
         try:
             nums = [float(p) for p in parts]
