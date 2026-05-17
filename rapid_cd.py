@@ -4810,14 +4810,14 @@ else:
             df_blank  = read_cd_file(f_blank)
             if df_melt is not None and df_single is not None:
                 selected_temp = st.selectbox("Select Temperature from Melt to Compare:", melt_temps)
-                wl_m, sig_m = df_melt["Wavelength"].values, df_melt[f"{selected_temp}"].values
+                wl_m, sig_m = df_melt["Wavelength"].values.copy(), df_melt[f"{selected_temp}"].values.copy()
                 if "CD" not in df_single.columns: st.error("Column 'CD' not found."); st.stop()
-                wl_s, sig_s = df_single["Wavelength"].values, df_single["CD"].values
+                wl_s, sig_s = df_single["Wavelength"].values.copy(), df_single["CD"].values.copy()
 
                 # Blank subtraction on refolded spectrum only
                 if df_blank is not None:
                     f_b = interp1d(df_blank["Wavelength"], df_blank["CD"], bounds_error=False, fill_value="extrapolate")
-                    sig_s -= f_b(wl_s)
+                    sig_s = sig_s - f_b(wl_s)
 
                 # ── CONVERSION HELPER ─────────────────────────────────────
                 def _rev_convert(sig, fmt, metric, path, conc_uM, nres):
